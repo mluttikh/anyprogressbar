@@ -110,6 +110,7 @@ ignore = [
 "tests/*" = [
     "ANN",
     "PT012",  # the block that raises is the bar's own `with` block: that is what is tested
+    "T20",  # printing while bars are live is what some tests are about
 ]
 
 [tool.ty.src]

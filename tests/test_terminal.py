@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import io
+import logging
 import os
 import re
+import sys
+import threading
 import time
 from typing import Any
 
@@ -216,6 +219,159 @@ def test_write_to_another_stream_leaves_the_bars_whole(clock):
         bar.update(3)
 
 
+def terminal_streams(monkeypatch) -> Screen:
+    """A terminal that standard output, standard error and the bars all write to. (Made in
+    the test itself: pytest sets its own streams again after the fixtures.)"""
+    screen = Screen()
+    monkeypatch.setattr(sys, "stdout", screen)
+    monkeypatch.setattr(sys, "stderr", screen)
+    return screen
+
+
+def test_print_and_logging_go_above_the_bars_and_the_streams_come_back(clock, monkeypatch):
+    tty = terminal_streams(monkeypatch)
+    log = logging.getLogger("anyprogressbar.test.print")
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(logging.Formatter("%(levelname)s %(message)s"))
+    log.addHandler(handler)
+    try:
+        set_renderer(terminal(tty))
+        with progress(total=4, desc="Work", clock=clock) as bar:
+            assert sys.stdout is not tty
+            assert handler.stream is not tty
+            clock.tick(0.2)
+            bar.update()
+            print("saved", 1)
+            log.warning("disk almost full")
+            clock.tick(0.2)
+            bar.update()
+            print("two\nlines")
+            assert tty.display() == [
+                "saved 1",
+                "WARNING disk almost full",
+                "two",
+                "lines",
+                "Work  50% ▕██████████          ▏ 2/4 · 00:00",
+            ]
+            bar.update(2)
+        assert sys.stdout is tty
+        assert sys.stderr is tty
+        assert handler.stream is tty
+        print("after")
+        assert tty.display()[-2:] == [
+            "Work 100% ▕████████████████████▏ 4/4 · done in 00:00 · 10 it/s",
+            "after",
+        ]
+    finally:
+        log.removeHandler(handler)
+
+
+def test_a_line_printed_in_parts_is_one_line(clock, monkeypatch):
+    tty = terminal_streams(monkeypatch)
+    set_renderer(terminal(tty))
+    with progress(total=2, desc="Work", clock=clock) as bar:
+        clock.tick(0.2)
+        bar.update()
+        print("a", end="")
+        print("b", end="")
+        bar.refresh()
+        print("c")
+        assert tty.display() == ["abc", "Work  50% ▕██████████          ▏ 1/2 · 00:00"]
+        bar.update()
+
+
+def test_a_prompt_takes_the_screen_until_its_line_is_finished(clock, monkeypatch):
+    tty = terminal_streams(monkeypatch)
+    set_renderer(terminal(tty))
+    with progress(total=2, desc="Work", clock=clock) as bar:
+        clock.tick(0.2)
+        bar.update()
+        print("Name: ", end="", flush=True)  # as input() does
+        assert tty.display() == ["Name:"]
+        bar.refresh()  # the bars do not draw while the prompt waits
+        assert tty.display() == ["Name:"]
+        tty.write("Mark\n")  # what the terminal echoes as it is typed
+        print("Hello, Mark")
+        assert tty.display() == [
+            "Name: Mark",
+            "Hello, Mark",
+            "Work  50% ▕██████████          ▏ 1/2 · 00:00",
+        ]
+        bar.update()
+
+
+def test_a_prompt_that_is_never_finished_is_left_on_its_own_line(clock, monkeypatch):
+    tty = terminal_streams(monkeypatch)
+    set_renderer(terminal(tty))
+    with progress(total=2, desc="Work", clock=clock) as bar:
+        clock.tick(0.2)
+        bar.update()
+        print("Continue? ", end="", flush=True)
+        bar.update()
+    assert tty.display() == [
+        "Continue?",
+        "Work 100% ▕████████████████████▏ 2/2 · done in 00:00 · 10 it/s",
+    ]
+
+
+def test_output_to_a_file_or_pipe_is_left_alone(clock, monkeypatch):
+    screen, out = Screen(), io.StringIO()
+    monkeypatch.setattr(sys, "stdout", out)
+    monkeypatch.setattr(sys, "stderr", screen)
+    set_renderer(terminal(screen))
+    with progress(total=2, desc="Work", clock=clock) as bar:
+        assert sys.stdout is out  # `script > file`: printing cannot spoil the bars
+        assert sys.stderr is not screen
+        clock.tick(0.2)
+        bar.update()
+        print("result")
+        bar.update()
+    assert out.getvalue() == "result\n"
+    assert sys.stderr is screen
+
+
+def test_a_stream_replaced_by_someone_else_meanwhile_is_left_as_it_is(clock, monkeypatch):
+    tty = terminal_streams(monkeypatch)
+    set_renderer(terminal(tty))
+    other = io.StringIO()
+    with progress(total=2, desc="Work", clock=clock) as bar:
+        held = sys.stdout
+        monkeypatch.setattr(sys, "stdout", other)
+        bar.update(2)
+    assert sys.stdout is other
+    held.write("still works\n")  # a stream kept from before passes straight through now
+    assert tty.display()[-1] == "still works"
+
+
+def test_no_redirection_when_asked_for_none(clock, monkeypatch):
+    tty = terminal_streams(monkeypatch)
+    set_renderer(terminal(tty, redirect=False))
+    with progress(total=2, desc="Work", clock=clock) as bar:
+        assert sys.stdout is tty
+        bar.update(2)
+
+
+def test_printing_from_threads_keeps_lines_whole(monkeypatch):
+    tty = terminal_streams(monkeypatch)
+    set_renderer(terminal(tty, threaded=True, interval=0.01, delay=0.0))
+
+    def chatter(name: str) -> None:
+        for i in range(50):
+            print(f"{name} line {i}")
+
+    with progress(total=4, desc="Work") as bar:
+        threads = [threading.Thread(target=chatter, args=(f"t{k}",)) for k in range(4)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+            bar.update()
+    shown = tty.display()
+    printed = [line for line in shown if " line " in line]
+    assert sorted(printed) == sorted(f"t{k} line {i}" for k in range(4) for i in range(50))
+    assert shown[-1].startswith("Work 100%")
+
+
 def test_write_without_live_bars_is_print():
     out = io.StringIO()
     set_renderer("log")
@@ -361,3 +517,71 @@ def test_a_terminal_that_reports_no_width_is_taken_as_80_columns(clock, monkeypa
         bar.update(2)
         assert screen.display() == ["Work  50% ▕█████████▌         ▏ 2/4 · 00:00"]
         bar.update(2)
+
+
+SCRIPT = """
+import logging, threading, time, warnings
+from anyprogressbar import progress
+
+logging.basicConfig(format="%(levelname)s %(message)s")  # holds the real stderr
+log = logging.getLogger("job")
+
+def chatter():
+    for i in range(3):
+        print(f"from a thread {i}")
+
+with progress(total=12, desc="Work") as bar:
+    for i in range(12):
+        time.sleep(0.1)
+        bar.update()
+        if i == 6:
+            print("printed")
+            log.warning("logged")
+            warnings.warn("warned", stacklevel=1)
+            worker = threading.Thread(target=chatter)
+            worker.start()
+            worker.join()
+print("after")
+"""
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="no pseudo-terminals on Windows")
+def test_in_a_real_terminal_nothing_printed_breaks_the_bars(tmp_path):
+    import fcntl
+    import pty
+    import struct
+    import subprocess
+    import termios
+
+    script = tmp_path / "job.py"
+    script.write_text(SCRIPT, encoding="utf-8")
+    leader, follower = pty.openpty()
+    fcntl.ioctl(follower, termios.TIOCSWINSZ, struct.pack("HHHH", 24, 100, 0, 0))
+    env = {k: v for k, v in os.environ.items() if k not in ("CI", "ANYPROGRESSBAR", "NO_COLOR")}
+    env |= {"TERM": "xterm-256color", "NO_COLOR": "1"}
+    child = subprocess.Popen(
+        [sys.executable, str(script)], stdin=follower, stdout=follower, stderr=follower, env=env
+    )
+    os.close(follower)
+    raw = b""
+    while True:
+        try:
+            chunk = os.read(leader, 4096)
+        except OSError:  # the other end is closed (Linux)
+            break
+        if not chunk:  # (macOS)
+            break
+        raw += chunk
+    os.close(leader)
+    assert child.wait(timeout=30) == 0
+    screen = Screen()
+    screen.write(raw.decode("utf-8"))
+    shown = screen.display()
+    assert shown[0] == "printed"
+    assert shown[1] == "WARNING logged"
+    assert shown[2].endswith("UserWarning: warned")
+    assert shown[-5:-2] == [f"from a thread {i}" for i in range(3)]
+    assert re.fullmatch(r"Work 100% ▕█+▏ 12/12 · done in 00:01 · [\d.]+ it/s", shown[-2])
+    assert shown[-1] == "after"
+    assert sum("Work" in line for line in shown) == 1  # no frame left behind
+    assert "\x1b[?25h" in raw.decode("utf-8")  # the cursor is given back

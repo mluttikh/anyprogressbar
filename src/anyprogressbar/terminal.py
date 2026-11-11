@@ -7,18 +7,27 @@ tick and a stall shows while the loop itself is busy with one slow item.
 
 A finished root's last line stays in the scrollback; work that is done within `delay`
 seconds is never drawn at all.
+
+While bars are live, `sys.stdout` and `sys.stderr` (where they are terminals) are replaced
+by `Redirect`, and logging handlers that write to them are pointed at it: a line that is
+printed or logged then goes above the bars instead of through them. A line that is not
+finished and is flushed (a prompt for `input()`) hands the terminal back until the line is
+finished. (Decision 0005.)
 """
 
 from __future__ import annotations
 
 import atexit
 import contextlib
+import logging
 import os
 import sys
 import threading
+import time
 import unicodedata
 import weakref
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
+from typing import Any
 
 from anyprogressbar import format as fmt
 from anyprogressbar.render import Stream
@@ -203,6 +212,86 @@ def _osc_progress() -> bool:
     )
 
 
+class Redirect:
+    """A text stream that hands whole lines to a renderer while it is active, and passes
+    everything straight through otherwise. Everything else is the stream it stands for."""
+
+    def __init__(self, original: Any, renderer: TerminalRenderer) -> None:
+        self._original = original
+        self._renderer = renderer
+        self._local = threading.local()  # .busy: in the renderer already; .partial: a line
+        self.active = True
+
+    def write(self, text: str) -> int:
+        if not self.active or getattr(self._local, "busy", False):
+            return self._original.write(text)
+        self._local.busy = True
+        try:
+            # each thread's unfinished line is its own: lines from two threads stay whole
+            *lines, self._local.partial = (self._partial + text).split("\n")
+            for line in lines:
+                self._renderer.print_line(line, self._original)
+        finally:
+            self._local.busy = False
+        return len(text)
+
+    @property
+    def _partial(self) -> str:
+        return getattr(self._local, "partial", "")
+
+    def writelines(self, lines: Iterable[str]) -> None:
+        for line in lines:
+            self.write(line)
+
+    def flush(self) -> None:
+        """A line that is flushed before it is finished is meant to be seen now."""
+        if self.active and self._partial and not getattr(self._local, "busy", False):
+            self._local.busy = True
+            try:
+                self._renderer.print_partial(self._partial, self._original)
+            finally:
+                self._local.busy = False
+            self._local.partial = ""
+        self._original.flush()
+
+    def release(self) -> None:
+        """Stop handing lines over; what is left of a line goes out as it is."""
+        self.active = False
+        if self._partial:  # this thread's; another thread's is lost with its line
+            self._original.write(self._partial)
+            self._local.partial = ""
+        with contextlib.suppress(Exception):
+            self._original.flush()
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._original, name)
+
+
+def unwrap(stream: Any) -> Any:
+    """The stream a `Redirect` stands for; any other stream as it is."""
+    while isinstance(stream, Redirect):
+        stream = stream._original
+    return stream
+
+
+def _is_tty(stream: Any) -> bool:
+    try:
+        return bool(stream.isatty())
+    except (AttributeError, ValueError):
+        return False
+
+
+def _stream_handlers() -> list[logging.StreamHandler]:
+    loggers: list[Any] = [logging.getLogger(), *logging.Logger.manager.loggerDict.values()]
+    return [
+        handler
+        for logger in loggers
+        if isinstance(logger, logging.Logger)
+        for handler in logger.handlers
+        if type(handler) is logging.StreamHandler  # not files, sockets or other subclasses
+    ]
+
+
 class TerminalRenderer:
     """Draws bars in place on a terminal.
 
@@ -214,6 +303,8 @@ class TerminalRenderer:
     color: by default unless `NO_COLOR` is set.
     threaded: False draws only when a bar hands over a picture (for tests).
     columns: the width to draw in; by default the terminal's, asked at each draw.
+    redirect: while bars are live, send what is printed or logged to the terminal above
+        them (`Redirect`).
     """
 
     def __init__(
@@ -226,6 +317,7 @@ class TerminalRenderer:
         color: bool | None = None,
         threaded: bool = True,
         columns: int | None = None,
+        redirect: bool = True,
     ) -> None:
         self._file = file
         self.interval = interval
@@ -235,7 +327,12 @@ class TerminalRenderer:
         self._threaded = threaded
         self._columns = columns
         self._osc = _osc_progress()
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
+        self._redirect = redirect
+        self._redirects: dict[str, Redirect] = {}  # "stdout"/"stderr" -> what replaced it
+        self._handlers: list[tuple[logging.StreamHandler, Any]] = []  # and their streams
+        self._suspended = False  # an unfinished line of someone else's is on the screen
+        self._repainted = 0.0  # when printed lines last let the bars be drawn again
         self._live: dict[int, Snapshot] = {}
         self._sources: dict[int, weakref.WeakMethod] = {}
         self._drawn: set[int] = set()  # roots that have been on screen
@@ -249,7 +346,7 @@ class TerminalRenderer:
 
     @property
     def file(self) -> Stream:
-        return self._file if self._file is not None else sys.stderr
+        return unwrap(self._file if self._file is not None else sys.stderr)
 
     def _use_ascii(self) -> bool:
         if self._ascii is None:
@@ -285,6 +382,8 @@ class TerminalRenderer:
 
     def update(self, root: Snapshot) -> None:
         with self._lock:
+            if not self._live and self._redirect:
+                self._take_streams()
             self._live[root.id] = root
             if not self._threaded:
                 self._paint()
@@ -306,18 +405,76 @@ class TerminalRenderer:
                 [] if quick or not keep else lines(root, self._width() - 1, ascii=self._use_ascii())
             )
             self._paint(above=[self._styled(segments) for segments in last])
+            if not self._live:
+                self._give_streams()
 
     def write(self, text: str, file: Stream | None = None) -> None:
         """Print `text` above the bars (to standard output by default)."""
+        target = unwrap(file if file is not None else sys.stdout)
+        for line in text.split("\n"):
+            self.print_line(line, target)
+
+    def print_line(self, line: str, target: Stream) -> None:
+        """A finished line, for `target`, above the bars. The bars come back at once after a
+        line on its own; during a burst of lines at most every half `interval`, and the
+        thread draws them again after the burst."""
         with self._lock:
-            target = file if file is not None else sys.stdout
-            if target is self.file or not self._height:
-                self._paint(above=text.splitlines() or [""], target=target)
-                return
-            self._erase()
-            target.write(text + "\n")
+            if self._suspended:  # the rest of a line that is on the screen already
+                self._suspended = False
+            else:
+                self._erase()
+            target.write(line + "\n")
             target.flush()
-            self._paint()
+            now = time.monotonic()
+            if not self._threaded or now - self._repainted >= self.interval / 2:
+                self._repainted = now
+                self._paint(force=True)
+
+    def print_partial(self, text: str, target: Stream) -> None:
+        """An unfinished line that is to be seen now (a prompt): the bars make way until the
+        line is finished."""
+        with self._lock:
+            if not self._suspended:
+                self._erase()
+                self._suspended = True
+            target.write(text)
+            target.flush()
+
+    # -- standard output, standard error and logging ---------------------------------------
+
+    def _take_streams(self) -> None:
+        """Put a `Redirect` in place of each standard stream that is a terminal (a stream
+        that goes to a file or a pipe cannot spoil the bars), and of the renderer's own."""
+        own = self.file
+        for name in ("stdout", "stderr"):
+            stream = getattr(sys, name)
+            if isinstance(stream, Redirect) or not (stream is own or _is_tty(stream)):
+                continue
+            redirect = Redirect(stream, self)
+            setattr(sys, name, redirect)
+            self._redirects[name] = redirect
+        originals = {id(r._original): r for r in self._redirects.values()}
+        for handler in _stream_handlers():
+            redirect = originals.get(id(handler.stream))
+            if redirect is not None:
+                self._handlers.append((handler, handler.stream))
+                handler.stream = redirect  # not setStream: that flushes, under its lock
+
+    def _give_streams(self) -> None:
+        """Put back what was replaced, where nothing else has replaced it since. A
+        `Redirect` that is still held somewhere passes everything through from now on."""
+        if self._suspended:
+            self.file.write("\n")
+            self._suspended = False
+        for name, redirect in self._redirects.items():
+            redirect.release()
+            if getattr(sys, name) is redirect:
+                setattr(sys, name, redirect._original)
+        for handler, stream in self._handlers:
+            if isinstance(handler.stream, Redirect):
+                handler.stream = stream
+        self._redirects.clear()
+        self._handlers.clear()
 
     # -- drawing ---------------------------------------------------------------------------
 
@@ -350,8 +507,14 @@ class TerminalRenderer:
             self._height = 0
             self._frame = ""
 
-    def _paint(self, above: list[str] | None = None, target: Stream | None = None) -> None:
-        """Redraw the frame; `above` are lines to leave in the scrollback over it."""
+    def _paint(self, above: list[str] | None = None, *, force: bool = False) -> None:
+        """Redraw the frame; `above` are lines to leave in the scrollback over it. `force`:
+        also when the frame did not change (it was erased)."""
+        if self._suspended:
+            if not above:
+                return
+            self.file.write("\n")  # the bars' own lines go under the unfinished one
+            self._suspended = False
         columns = self._width() - 1  # the last column is left free: no terminal wraps then
         ascii = self._use_ascii()
         rows: list[str] = []
@@ -360,7 +523,7 @@ class TerminalRenderer:
                 self._drawn.add(root.id)
                 rows += [self._styled(s) for s in lines(root, columns, ascii=ascii)]
         frame = "\n".join(rows)
-        if not above and frame == self._frame:
+        if not above and frame == self._frame and not (force and rows):
             return
         out = [_SYNC_ON]
         if self._height:
@@ -378,7 +541,7 @@ class TerminalRenderer:
         if self._osc:
             out.append(self._taskbar())
         out.append(_SYNC_OFF)
-        stream = target if target is not None else self.file
+        stream = self.file
         stream.write("".join(out))
         stream.flush()
         self._height = len(rows)
@@ -394,6 +557,8 @@ class TerminalRenderer:
 
     def _restore(self) -> None:
         """At exit: give the cursor back, and leave the prompt on a line of its own."""
+        with contextlib.suppress(Exception):
+            self._give_streams()
         with contextlib.suppress(Exception):
             if self._hidden:
                 self.file.write(("\n" if self._height else "") + _SHOW)

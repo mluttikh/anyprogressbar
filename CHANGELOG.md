@@ -35,7 +35,9 @@ All notable changes to anyprogressbar. The format follows
   without it the HTML bar says once how to get it. Where the notebook page cannot show
   widgets (Jupyter started from an environment without anywidget), the bar is the HTML one
   and says so once.
-- `write(...)` prints above live bars.
+- On a terminal, what is printed or logged while bars are live goes above them, and a
+  prompt for `input()` has the screen until it is answered. `write(...)` does the same for
+  a stream of your own.
 - Example notebooks in `examples/`, run by the tests.
 - The renderer is chosen by where the code runs (a notebook, a terminal, or anything else),
   by `set_renderer`, or by `ANYPROGRESSBAR=notebook|widget|html|terminal|log|off`. `CI`, `TERM=dumb` and `NO_COLOR`

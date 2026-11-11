@@ -225,7 +225,8 @@ def default_renderer() -> Renderer:
 
 
 def write(*values: object, sep: str = " ", file: Stream | None = None) -> None:
-    """Print while bars are live: above them on a terminal, as `print` does elsewhere."""
+    """Print above live bars. Since `print` does that too on a terminal (`terminal.Redirect`),
+    this is for streams that are not redirected, such as a `file` of your own."""
     text = sep.join(str(v) for v in values)
     renderer = default_renderer()
     above = getattr(renderer, "write", None)

@@ -81,6 +81,7 @@ def test_where_bars_show_writes_log_lines_and_milestones(executed):
     assert "Nightly import: done, 40 files in 00:0" in printed
     assert "Only this one: done" in printed
     assert "30 checked" in printed
+    assert "WARNING one file was skipped" in printed
     assert "Milestones: 50% after" in printed
     assert "Milestones: done (40 of 40)" in printed
     assert "Silent" not in printed + "".join(texts(nb))

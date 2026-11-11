@@ -51,6 +51,5 @@
 - Detection of a notebook kernel and of marimo (they get log lines until their renderers
   exist).
 - The Windows console path (`_windows_ansi`) has not been run on Windows.
-- Output the program prints itself with `print` while a bar is live still breaks the frame;
-  `write(...)` is the way for now. Redirecting `sys.stdout` or a logging handler could follow.
+- Output the program prints itself while a bar is live goes above the bars (decision 0005).
 - Reporting from worker processes. Snapshots are plain data so that a queue can carry them.

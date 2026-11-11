@@ -35,7 +35,7 @@ while; when the work ends it becomes plain HTML, which stays in the saved notebo
 the `widget` extra it is that HTML throughout, replaced in place. On a terminal the bar is
 redrawn in place; in a pipe, a file or a CI job it becomes a line every few seconds.
 `ANYPROGRESSBAR=off` silences every bar, `log`, `terminal`, `notebook`, `widget` and `html`
-force one, and `write(...)` prints above live bars.
+force one. On a terminal, `print` and logging while bars are live go above them.
 
 The widget needs anywidget in the environment that Jupyter itself runs in, not only in the
 kernel's: with uv, `uv run --with jupyterlab --with anywidget jupyter lab`. Where the page
