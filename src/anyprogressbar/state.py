@@ -35,6 +35,7 @@ class Snapshot:
     remaining: float | None  # seconds; None without a total or a rate
     since_progress: float  # seconds since n last changed
     message: str = ""  # why it failed or stopped
+    leave: bool = True  # keep the bar on screen once it is done
     metrics: dict[str, str] = field(default_factory=dict)
     children: tuple[Snapshot, ...] = ()
 

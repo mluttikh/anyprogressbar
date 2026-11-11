@@ -1,8 +1,8 @@
 """Renderers: what turns snapshots of a tree of bars into something to look at.
 
 A bar knows nothing of terminals or notebooks. Its root hands a `Snapshot` to a renderer, at
-most every `min_interval` seconds and at each start and end. So far there are two: nothing,
-and log lines. The terminal line, the notebook's HTML and the widget come next.
+most every `min_interval` seconds and at each start and end. So far: nothing, log lines, and
+the terminal line (`terminal.py`). The notebook's HTML and the widget come next.
 """
 
 from __future__ import annotations
@@ -10,10 +10,18 @@ from __future__ import annotations
 import os
 import sys
 import warnings
-from typing import Protocol, TextIO
+from typing import Protocol
 
 from anyprogressbar import format as fmt
 from anyprogressbar.state import Snapshot, Status
+
+
+class Stream(Protocol):
+    """What a renderer writes to: a text stream, or anything with these two methods."""
+
+    def write(self, text: str, /) -> object: ...
+
+    def flush(self) -> object: ...
 
 
 class Renderer(Protocol):
@@ -42,7 +50,7 @@ class LogRenderer:
     """
 
     def __init__(
-        self, file: TextIO | None = None, *, interval: float = 5.0, delay: float = 2.0
+        self, file: Stream | None = None, *, interval: float = 5.0, delay: float = 2.0
     ) -> None:
         self._file = file
         self.interval = interval
@@ -116,31 +124,87 @@ def final_line(root: Snapshot) -> str:
 
 
 ENV = "ANYPROGRESSBAR"
-_named = {"off": NullRenderer, "log": LogRenderer}
+NAMES = ("terminal", "log", "off")
 _default: Renderer | None = None
+_shared: dict[str, Renderer] = {}
+
+
+def _make(name: str) -> Renderer:
+    """The one renderer of that name: bars that run at the same time must share a screen."""
+    if name not in _shared:
+        if name == "terminal":
+            from anyprogressbar.terminal import TerminalRenderer
+
+            _shared[name] = TerminalRenderer()
+        else:
+            _shared[name] = LogRenderer() if name == "log" else NullRenderer()
+    return _shared[name]
 
 
 def set_renderer(renderer: Renderer | str | None) -> None:
-    """The renderer for bars that are given none: an object, a name ("log", "off"), or None
-    to choose by the environment again."""
+    """The renderer for bars that are given none: an object, a name ("terminal", "log",
+    "off"), or None to choose by the environment again."""
     global _default  # noqa: PLW0603
     if isinstance(renderer, str):
-        if renderer not in _named:
-            raise ValueError(f"unknown renderer {renderer!r}; one of {sorted(_named)}")
-        renderer = _named[renderer]()
+        if renderer not in NAMES:
+            raise ValueError(f"unknown renderer {renderer!r}; one of {list(NAMES)}")
+        renderer = _make(renderer)
     _default = renderer
 
 
+def detect() -> str:
+    """The renderer that suits where the code runs: "terminal" on a terminal that can redraw
+    a line, "log" everywhere else (a pipe, a file, a CI job, a notebook kernel for now)."""
+    stream = sys.stderr
+    try:
+        interactive = stream.isatty()
+    except (AttributeError, ValueError):  # no stream, or a closed one
+        interactive = False
+    if not interactive or os.environ.get("TERM") == "dumb" or os.environ.get("CI"):
+        return "log"
+    if sys.platform == "win32" and not _windows_ansi():
+        return "log"
+    return "terminal"
+
+
+def _windows_ansi() -> bool:
+    """Ask the Windows console to read escape sequences; False where it cannot."""
+    try:
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32  # ty: ignore[missing-attribute]
+        handle = kernel32.GetStdHandle(-12)  # standard error
+        mode = ctypes.c_uint32()
+        if not kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+            return False
+        return bool(kernel32.SetConsoleMode(handle, mode.value | 0x0004))  # VT processing
+    except Exception:
+        return False
+
+
 def default_renderer() -> Renderer:
-    """`set_renderer`'s, else the one the `ANYPROGRESSBAR` variable names, else log lines."""
+    """`set_renderer`'s, else the one the `ANYPROGRESSBAR` variable names, else `detect()`'s."""
     if _default is not None:
         return _default
     name = os.environ.get(ENV, "").strip().lower()
-    if name in _named:
-        return _named[name]()
+    if name in NAMES:
+        return _make(name)
     if name:
         # a mistake in deployment configuration should not stop the work
         warnings.warn(
-            f"{ENV}={name!r} is not a renderer (one of {sorted(_named)}); ignored", stacklevel=2
+            f"{ENV}={name!r} is not a renderer (one of {list(NAMES)}); ignored", stacklevel=2
         )
-    return LogRenderer()
+    return _make(detect())
+
+
+def write(*values: object, sep: str = " ", file: Stream | None = None) -> None:
+    """Print while bars are live: above them on a terminal, as `print` does elsewhere."""
+    text = sep.join(str(v) for v in values)
+    renderer = default_renderer()
+    above = getattr(renderer, "write", None)
+    if above is not None:
+        above(text, file)
+    else:
+        target = file if file is not None else sys.stdout
+        target.write(text + "\n")
+        target.flush()

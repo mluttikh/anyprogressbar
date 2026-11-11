@@ -130,6 +130,7 @@ class Bar[T]:
             remaining=remaining,
             since_progress=end - self._t_progress if started else 0.0,
             message=self.message,
+            leave=self.leave,
             metrics=dict(self.metrics),
             children=tuple(c._snapshot(now) for c in self.children),
         )
@@ -170,8 +171,12 @@ class Bar[T]:
         with root._lock:
             if self.parent is not None:
                 self.parent.start()
-            elif root._renderer is None:
-                root._renderer = default_renderer()
+            else:
+                if root._renderer is None:
+                    root._renderer = default_renderer()
+                attach = getattr(root._renderer, "attach", None)
+                if attach is not None:  # a renderer that draws on a timer asks for pictures
+                    attach(self.id, self.snapshot)
             now = root._clock()
             self._t_start = self._t_progress = now
             self._estimator.start(now)
