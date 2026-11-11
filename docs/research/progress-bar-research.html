@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>anyprogressbar Research</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one reading column of prose, with wide tables and terminal specimens allowed to scroll inside their own frames. */
+:root {
+  --bg: #f5f7f9;
+  --surface: #ffffff;
+  --ink: #17212b;
+  --muted: #566573;
+  --line: #d5dce3;
+  --accent: #0a6f8f;
+  --accent-soft: #dcecf2;
+  --warn: #9a5b00;
+  --warn-soft: #fbefd9;
+  --good: #1f7a4d;
+  --bad: #a8323a;
+  --term-bg: #10202c;
+  --term-fg: #d7e3ea;
+  --term-dim: #7f95a3;
+  --term-fill: #58c4dc;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-head: "IBM Plex Sans Condensed", "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1820; --surface: #16222c; --ink: #e3eaef; --muted: #9bacb8; --line: #2b3b48;
+    --accent: #5cc3e0; --accent-soft: #173644; --warn: #e8b25a; --warn-soft: #3a2c12;
+    --good: #5fcf96; --bad: #f08a90; --term-bg: #0a1218; --term-fg: #d7e3ea; --term-dim: #7f95a3; --term-fill: #58c4dc;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1820; --surface: #16222c; --ink: #e3eaef; --muted: #9bacb8; --line: #2b3b48;
+  --accent: #5cc3e0; --accent-soft: #173644; --warn: #e8b25a; --warn-soft: #3a2c12;
+  --good: #5fcf96; --bad: #f08a90; --term-bg: #0a1218; --term-fg: #d7e3ea; --term-dim: #7f95a3; --term-fill: #58c4dc;
+  color-scheme: dark;
+}
+body {
+  background: var(--bg); color: var(--ink);
+  font: 400 16px/1.6 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 40px 80px;
+}
+.page { max-width: 880px; margin: 0 auto; display: flex; flex-direction: column; gap: 56px; }
+section { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+h1, h2, h3 { font-family: var(--font-head); font-weight: 600; text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(2rem, 5vw, 2.9rem); letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; padding-top: 20px; border-top: 2px solid var(--ink); }
+h3 { font-size: 1.2rem; margin-top: 12px; }
+p, ul, ol { margin: 0; max-width: 70ch; }
+ul, ol { padding-left: 1.25em; display: flex; flex-direction: column; gap: 6px; }
+a { color: var(--accent); text-underline-offset: 2px; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--accent-soft); padding: 1px 5px; border-radius: 3px; }
+.eyebrow { font: 600 0.78rem/1 var(--font-body); letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); }
+.lede { font-size: 1.12rem; color: var(--muted); }
+.meta { color: var(--muted); font-size: 0.9rem; }
+nav.toc { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.93rem; padding-block: 12px; border-block: 1px solid var(--line); }
+.term { background: var(--term-bg); color: var(--term-fg); font: 400 0.84rem/1.55 var(--font-mono); padding: 16px 18px; border-radius: 6px; overflow-x: auto; white-space: pre; margin: 0; }
+.term .dim { color: var(--term-dim); } .term .fill { color: var(--term-fill); }
+.term .ok { color: #7fd9a4; } .term .err { color: #f39aa0; } .term .lab { color: #e8c36a; }
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; min-width: 640px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+th { font-weight: 600; font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); background: var(--bg); }
+tr:last-child td { border-bottom: 0; }
+td:first-child { font-weight: 500; white-space: nowrap; }
+.note { background: var(--warn-soft); border-left: 3px solid var(--warn); padding: 12px 16px; border-radius: 0 6px 6px 0; max-width: 70ch; }
+.note strong { color: var(--warn); }
+.takeaways { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 20px 22px; }
+.takeaways ol { gap: 10px; max-width: none; }
+.tag { display: inline-block; font: 600 0.72rem/1 var(--font-body); letter-spacing: 0.05em; text-transform: uppercase; padding: 4px 7px; border-radius: 3px; white-space: nowrap; }
+.tag.slow { background: var(--warn-soft); color: var(--warn); }
+.tag.near { background: var(--line); color: var(--ink); }
+.tag.fast { background: var(--accent-soft); color: var(--accent); }
+.dag { color: var(--warn); font-weight: 600; }
+/* progress-function demo */
+.demo { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.demo-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.fn { display: grid; grid-template-columns: 130px 64px minmax(0, 1fr) 96px; gap: 12px; align-items: center; font-size: 0.9rem; }
+.fn svg { width: 64px; height: 28px; display: block; }
+.fn svg path { fill: none; stroke: var(--accent); stroke-width: 1.6; }
+.fn svg line { stroke: var(--line); stroke-width: 1; }
+.track { height: 14px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.track i { display: block; height: 100%; width: 0; background: var(--accent); }
+button { font: 600 0.88rem/1 var(--font-body); color: var(--surface); background: var(--accent); border: 0; border-radius: 4px; padding: 9px 14px; cursor: pointer; }
+@media (max-width: 560px) {
+  .fn { grid-template-columns: minmax(0, 1fr) 64px; }
+  .fn .track { grid-column: 1 / -1; order: 3; }
+  .fn .tag { order: 2; justify-self: start; grid-column: 1 / -1; }
+}
+.sources { font-size: 0.9rem; columns: 2 320px; column-gap: 32px; max-width: none; display: block; }
+.sources li { break-inside: avoid; margin-bottom: 6px; }
+</style>
+
+<div class="page">
+
+<header style="display:flex;flex-direction:column;gap:14px">
+  <span class="eyebrow">Research before implementation · 11 November 2026</span>
+  <h1>What makes a good progress bar</h1>
+  <p class="lede">A survey of the HCI research, the design guidance, and the progress bar libraries of a dozen language ecosystems, read with one question in mind: what should <code>anyprogressbar</code> be, as an anywidget package with a terminal fallback?</p>
+<pre class="term" aria-label="Anatomy of a tqdm-style progress line"><span class="lab">description  percent  bar (eighth-block resolution)        count       elapsed&lt;remaining  rate</span>
+Loading:      76%|<span class="fill">████████████████████████▎</span><span class="dim">       </span>| 7568/10000 [00:33&lt;00:10, 229.00it/s]</pre>
+  <nav class="toc" aria-label="Sections">
+    <a href="#summary">Summary</a><a href="#research">Research</a><a href="#eta">ETA estimation</a><a href="#survey">Library survey</a><a href="#patterns">Shared patterns</a><a href="#terminal">Terminal rendering</a><a href="#notebook">Notebook rendering</a><a href="#implications">Implications</a><a href="#open">Open questions</a><a href="#sources">Sources</a>
+  </nav>
+</header>
+
+<section id="summary">
+  <h2>Summary</h2>
+  <div class="takeaways">
+    <ol>
+      <li><strong>People want progress feedback, and it does not need to be precise.</strong> Myers (1985) found a clear preference for percent-done indicators. Later work shows the wait feels shorter when it is occupied, explained and finite.</li>
+      <li><strong>The end of the bar matters most.</strong> Stalls near the end are judged worst and a brisk finish is judged best (Harrison et al. 2007, replicated in direction by a 2022 Bayesian study). The practical rule for a library that reports real work: never stall silently, and never overpromise early.</li>
+      <li><strong>Timing thresholds are well established.</strong> Under about 1 second show nothing. From 1 to 10 seconds a looping indicator is enough. Past 10 seconds show percent done and time remaining. R's <code>cli</code> turns this into a default: a bar only appears after 2 seconds.</li>
+      <li><strong>Say what is happening.</strong> Operational transparency (Buell and Norton 2011) raises perceived value. A description and the current item do more than decoration.</li>
+      <li><strong>ETA is a hard estimation problem.</strong> Every mature library uses an exponentially weighted average of rate, and the careful ones (indicatif) weight by time, correct the start-up bias, and show no ETA until they have one worth showing.</li>
+      <li><strong>The best architectures separate reporting from rendering.</strong> R's progressr, Julia's ProgressLogging, Apple's Foundation <code>Progress</code>, Zig's <code>std.Progress</code> and Docker BuildKit all make the loop emit progress events and let a renderer chosen elsewhere draw them. This is the natural shape for a widget with a terminal fallback.</li>
+      <li><strong>Degrade in steps, not on or off.</strong> Widget, animated terminal line, periodic log line, silence. Non-TTY output should be append-only lines every few seconds, never carriage returns.</li>
+      <li><strong>Notebook progress bars fail in known ways.</strong> <code>tqdm.notebook</code> prints <code>HBox(children=…)</code> without a working widget frontend, leaves bars blue forever after an exception, and shows nothing useful in a saved or exported notebook. These are the gaps to close.</li>
+      <li><strong>Accessibility is cheap if planned.</strong> A named <code>role="progressbar"</code> with <code>aria-valuetext</code> in the widget, and a static text mode without spinners in the terminal.</li>
+      <li><strong>The space is not empty.</strong> <code>everbar</code> (backend selection per environment, alpha) and wigglystuff's <code>ProgressBar</code> (anywidget with a rich fallback in script mode) are the closest prior art. Neither offers one renderer-independent model with nesting, end states, ETA and a static snapshot.</li>
+    </ol>
+  </div>
+  <p class="note"><strong>How to read this.</strong> Claims about papers were checked against the paper text where I could get it (both Harrison papers) and against abstracts or secondary reports otherwise, which I say where it applies. Library rows marked <span class="dag">†</span> come from my prior knowledge and were not re-checked against current documentation in this session.</p>
+</section>
+
+<section id="research">
+  <h2>What the research says</h2>
+
+  <h3>Why show progress at all</h3>
+  <p>Brad Myers ran the founding study at CHI 1985. Participants ran database searches with and without a percent-done indicator. Secondary accounts report 48 participants, of whom 86% preferred having the indicator; the effect on perceived speed was not statistically significant. Myers' argument was about anxiety and planning: novices get reassurance that the command was accepted and is still working, and experts get enough information to decide whether to wait or do something else. He is also quoted as saying people did not mind much when the bar was inaccurate.</p>
+  <p>David Maister's 1985 essay on waiting lines supplies the framework most later work leans on: unoccupied time feels longer than occupied time, uncertain waits feel longer than known finite waits, unexplained waits feel longer than explained ones, and anxiety lengthens all of them. A progress bar addresses three of the four. Nielsen Norman Group cites a University of Nebraska-Lincoln study in which users who saw an animated progress bar were willing to wait about three times longer than users who saw nothing.</p>
+
+  <h3>When to show which indicator</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Wait</th><th>Guidance</th><th>Source</th></tr></thead>
+    <tbody>
+      <tr><td>&lt; 0.1 s</td><td>Feels instantaneous. No indicator.</td><td>Miller 1968; Nielsen 1993</td></tr>
+      <tr><td>0.1 to 1 s</td><td>Noticed, but flow of thought is kept. An indicator here is a distraction.</td><td>Nielsen; NN/g</td></tr>
+      <tr><td>1 to 10 s</td><td>Show something. A looping animation with a text label is sufficient for roughly 2 to 10 s.</td><td>NN/g</td></tr>
+      <tr><td>&ge; 10 s</td><td>Percent done, with remaining time, step count and a way to cancel.</td><td>NN/g</td></tr>
+      <tr><td>CLI start</td><td>Print something within 100 ms. Print before a network request, not after.</td><td>clig.dev</td></tr>
+      <tr><td>CLI bar</td><td>Show the bar only after 2 s, or after 1 s when under half done by then.</td><td>R <code>cli</code> default</td></tr>
+    </tbody>
+  </table></div>
+  <p>NN/g adds two rules that matter for a library. Percent-done may be used for shorter waits when the system is working through a series of records, which is exactly the loop case. And the more variable the duration, the lower the threshold for switching to percent-done should be. Static "Loading…" text with nothing moving is the one thing they tell designers not to do, because it cannot be told apart from a hung program.</p>
+
+  <h3>The shape of progress over time</h3>
+  <p>Harrison, Amento, Kuznetsov and Bell (UIST 2007) showed 22 participants pairs of progress bars that all took 5.5 seconds but advanced according to nine different functions, and asked which felt faster. The functions fell into three groups. The demonstration below plays the paper's nine functions. At rest each bar shows where it stands at half time.</p>
+
+  <div class="demo">
+    <div class="demo-head">
+      <strong>Nine progress functions, identical duration</strong>
+      <button id="play" type="button">Play all (5.5 s)</button>
+    </div>
+    <div id="fns"></div>
+    <p class="meta">Functions from Table 1 of the paper. Group labels are the paper's clusters from its logistic regression: differences between groups were significant, differences within groups mostly not.</p>
+  </div>
+
+  <ul>
+    <li><strong>Pauses lengthen perceived duration</strong>, and more so near the end. All three functions with late pauses landed in the slowest group.</li>
+    <li><strong>Acceleration towards the end shortens it.</strong> The two accelerating power functions were the only ones judged faster than linear.</li>
+    <li><strong>An early pause is nearly free.</strong> "Early Pause" was judged about equal to linear, because its later catch-up reads as acceleration.</li>
+    <li><strong>Order matters.</strong> Of 990 comparisons the first bar shown was preferred 38% of the time and the second 26%.</li>
+  </ul>
+  <p>The authors frame this with peak-and-end effects and duration neglect from Fredrickson and Kahneman. Their advice is specific about scope: do not distort bars for stable processes with known totals, where an honest linear bar is accurate. For roughly estimated multi-stage work they suggest putting slow or unpredictable stages first, and holding back early progress so there is slack to cover a later stall.</p>
+  <p>A 2022 study (arXiv 2211.13909) measured the same question with an adaptive Bayesian psychophysics method and eye tracking, comparing four non-constant 5-second bars against constant ones. Constant and slow-to-fast bars were perceived as fastest, and the final part of the bar anchored the judgement. Amer and Johnson (2014, 2016) found users prefer a consistently moving bar to a stalling one and judge it shorter.</p>
+  <p class="note"><strong>A result that points the other way.</strong> In web surveys the outcome is drop-off, not perceived duration. Villar, Callegaro and Yang's 2013 meta-analysis of 32 experiments found that constant-speed indicators did not reduce drop-off, fast-to-slow indicators reduced it, and slow-to-fast indicators increased it. Early encouragement keeps people in a task they can abandon. Perceived speed of a task they will sit through is a different measure. The literature review in the 2022 paper also says earlier studies do not agree on which speed profile feels fastest.</p>
+
+  <h3>Visual treatment</h3>
+  <p>Harrison, Yeo and Hudson (CHI 2010, 20 participants, 5-second bars) changed the look of the bar instead of its motion. A fill that pulses with <em>increasing</em> frequency (1.1 Hz rising to 1.25 Hz) felt faster than constant or decreasing pulsation. Animated ribbing that moves <em>against</em> the direction of progress felt faster than still or forward ribbing, by induced motion. The best variant, backwards ribbing that decelerates, reduced perceived duration by 11% against a plain solid bar in the final experiment. The effect is modest, cheap to implement in a browser, and impossible in a terminal.</p>
+
+  <h3>Showing the work</h3>
+  <p>Buell and Norton (Management Science 2011) call it the labor illusion. When a travel search site showed which airlines it was querying, people valued the service more, and in some conditions preferred a transparent 30 to 60 second wait over an instant result with identical output. The mechanism is perceived effort and reciprocity. For a progress bar the lesson is the text beside it: "Updating address 3 of 50" beats a bare percentage, which is also what NN/g recommends.</p>
+
+  <h3>Spinners, skeletons and distractions</h3>
+  <p>The evidence here is thin and mostly informal. Viget tested a spinner, a skeleton screen and a blank screen of equal length on 136 people: the skeleton was perceived as longest (2.82 s average against 2.41 s for the spinner and 2.29 s for blank). A CHI 2016 extended abstract by Hohenstein and colleagues is reported to find that interactive loading animations beat progress bars for 5 and 10 second waits but feel too busy at 2 seconds. Neither is a reason to design a data-loop progress bar differently. Both support the threshold rule above: do not draw anything elaborate for a short wait.</p>
+
+  <h3>Why estimates go wrong</h3>
+  <p>The database community studied progress estimation formally. Chaudhuri, Narasayya and Ramamurthy (SIGMOD 2004) built a progress estimator for SQL Server; a year later Chaudhuri, Kaushik and Ramamurthy proved that in the worst case no estimator can guarantee anything better than "between 0% and 100%", and that useful bounds need assumptions about the data and the query. ParaTimer (Morton and colleagues) answered for parallel MapReduce pipelines by giving several estimates for different scenarios instead of one number. The Windows file copy dialog is the folk example: remaining bytes divided by current speed, which swings whenever the mix of small and large files changes. One product policy quoted in that discussion is worth copying: when an accurate estimate cannot be produced, show none.</p>
+
+  <h3>Accessibility</h3>
+  <p><strong>Web.</strong> The native <code>&lt;progress&gt;</code> element is preferred over <code>role="progressbar"</code>. Either way the bar needs an accessible name that says what is progressing. <code>aria-valuenow</code> is omitted when the bar is indeterminate. <code>aria-valuetext</code> replaces the numeric announcement and is the place for "3 of 10 files, 50%". Carbon Design System notes that neither variant can tell assistive technology it has failed, so the error must be stated in text beside the bar. Motion should respect <code>prefers-reduced-motion</code>.</p>
+  <p><strong>Terminal.</strong> Sampath, Merrick and Macvean (CHI 2021) studied 12 developers who use screen readers and found unstructured text to be the main problem with CLIs. GitHub's CLI team later replaced its redrawn braille spinner with a static text line ("Working…" or a description of the action) in its accessible mode, because speech synthesis handled the redraws badly, and moved its palette to the 16 ANSI colours so users control contrast from their terminal settings.</p>
+
+  <h3>Motivation effects, for completeness</h3>
+  <p>The goal-gradient hypothesis (Hull 1932; Kivetz, Urminsky and Zheng 2006) says effort increases as a goal gets closer, and the endowed progress effect (Nunes and Drèze 2006: a ten-stamp card with two stamps filled beats an eight-stamp card) says a head start increases completion. Both concern tasks a person performs. They explain why onboarding checklists start partly filled and have little bearing on a bar that reports a computation.</p>
+</section>
+
+<section id="eta">
+  <h2>ETA and rate estimation in practice</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Library</th><th>Method</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>tqdm</td><td>Exponential moving average of rate, <code>smoothing=0.3</code></td><td>0 is the overall average, 1 the instantaneous speed. The fork tldm adds a separate smoothing factor for the displayed ETA.</td></tr>
+      <tr><td>indicatif (Rust)</td><td>Time-weighted exponential average, applied twice, with debiasing</td><td>Weighting by elapsed time stops one large update from jerking the estimate. Debiasing removes the pull towards the initial zero. An earlier version turned out to compute a harmonic mean of rates by accident (issue 534).</td></tr>
+      <tr><td>alive-progress</td><td>Exponential smoothing for both rate and ETA</td><td>Long ETAs are shown with lower precision. <code>bar(skipped=True)</code> keeps resumed items out of the rate.</td></tr>
+      <tr><td>mpb (Go)</td><td>EWMA over per-iteration durations</td><td>The caller must pass each iteration's duration (<code>EwmaIncrement</code>), which is more accurate and more demanding.</td></tr>
+      <tr><td>cli-progress (Node)</td><td>Window of the last 10 updates (<code>etaBuffer</code>)</td><td>An unchanged value across the window gives an infinite ETA. Display capped at 115 days.</td></tr>
+      <tr><td>progressbar2</td><td><code>SmoothingETA</code>, EMA by default</td><td>Several ETA widgets to choose from.</td></tr>
+      <tr><td>Foundation <code>Progress</code> <span class="dag">†</span></td><td>None built in</td><td>Throughput and estimated time remaining are fields the reporter may fill in.</td></tr>
+    </tbody>
+  </table></div>
+  <p>What follows from this and from the research section:</p>
+  <ul>
+    <li>Estimate rate with a time-weighted exponential average and correct the start-up bias. Samples arrive at irregular intervals, so weighting per update is wrong when updates are bursty.</li>
+    <li>Show no ETA until there is enough evidence (a minimum number of updates and a minimum elapsed time). An empty field is better than "00:00" or a number that halves every second.</li>
+    <li>Round with decreasing precision: seconds under a minute, then "about 3 min", then "about 2 h".</li>
+    <li>Keep elapsed time ticking between updates, and count the ETA down between updates too. A frozen clock is the terminal equivalent of static "Loading…".</li>
+    <li>Detect stalls from the time since the last update compared with the recent inter-update interval, and say so ("no progress for 45 s") instead of counting an ETA down past zero.</li>
+    <li>Exclude skipped or cached items from the rate, as alive-progress does, so a resumed job does not start with a wildly optimistic ETA.</li>
+    <li>Prefer estimates that err long. NN/g: finishing early is a pleasant surprise, stalling at 99% is the worst outcome.</li>
+  </ul>
+</section>
+
+<section id="survey">
+  <h2>Library survey</h2>
+  <p>Releases and dates for Python packages were read from PyPI on 11 November 2026.</p>
+
+  <h3>Python</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Package</th><th>Latest</th><th>What it is known for</th><th>Worth borrowing</th></tr></thead>
+    <tbody>
+      <tr><td>tqdm</td><td>4.70.1 · Sep 2026</td><td>The default. Wraps any iterable. About 60 ns overhead per iteration, unit-tested. Terminal, notebook widget, GUI and chat-bot frontends.</td><td>Dynamic <code>miniters</code> so most iterations skip the clock entirely. <code>mininterval=0.1</code>, <code>maxinterval=10</code> with a monitor thread. <code>disable=None</code> to switch off when not a TTY. <code>TQDM_*</code> environment overrides. <code>tqdm.write</code> and a logging redirect. Notebook colours for running, done and failed.</td></tr>
+      <tr><td>rich.progress</td><td>15.0.0 · Apr 2026</td><td>Composable columns, several tasks in one live display, 10 refreshes per second on a thread. Used by pip <span class="dag">†</span>.</td><td>Columns as the unit of customisation. Tasks added with <code>start=False</code> pulse until the total is known. <code>transient</code>. Stdout and stderr redirected so <code>print</code> lands above the bars. File wrappers. In Jupyter it does not auto-refresh.</td></tr>
+      <tr><td>alive-progress</td><td>3.3.0 · Jul 2025</td><td>Spinner speed follows real throughput. Refresh rate adapts on a calibrated logarithmic curve up to about 60 fps.</td><td>The final receipt (count, elapsed, rate), printed even after Ctrl-C. Over- and underflow markers when the count misses the total. Print hook that prefixes lines with the bar position. Non-TTY shows only the receipt. No multiple bars; total cannot change.</td></tr>
+      <tr><td>progressbar2</td><td>4.7.0 · Nov 2026</td><td>Widget-list composition, long-lived.</td><td>Choice of ETA estimators.</td></tr>
+      <tr><td>enlighten</td><td>1.14.1 · Mar 2025</td><td>Bars pinned at the bottom while normal output scrolls above, without redirecting stdout (terminal scroll regions <span class="dag">†</span>).</td><td>Multicoloured subcounters in one bar (passed, failed, skipped). Status bars. Disabled manager when the stream is not a TTY.</td></tr>
+      <tr><td>fastprogress</td><td>1.1.6 · May 2026</td><td>fastai's nested master and child bars, with a live loss graph under the bar.</td><td>Notebook output is plain HTML updated through a display handle, no ipywidgets <span class="dag">†</span>. Redirected output keeps only the written messages.</td></tr>
+      <tr><td>atpbar</td><td>2.0.10 · Apr 2026</td><td>Bars for threading and multiprocessing tasks.</td><td>Worker processes report to one drawing process.</td></tr>
+      <tr><td>yaspin, halo</td><td>3.5.1 · Sep 2026; 0.0.31 · 2020</td><td>Spinners only.</td><td>Final glyph replaces the spinner (check or cross).</td></tr>
+      <tr><td>click.progressbar <span class="dag">†</span></td><td></td><td>Small built-in bar for CLI tools.</td><td>Hidden when not a TTY; item label callback.</td></tr>
+      <tr><td>tldm</td><td>1.3.0 · Jul 2026</td><td>Typed fork of tqdm for Python 3.11+, started December 2025 on the claim that tqdm is unmaintained (tqdm has since released 4.70.1).</td><td>Rolling metrics, phase timing, an end-of-run summary dict, separate ETA smoothing.</td></tr>
+      <tr><td>everbar</td><td>0.3.0 · Jul 2026</td><td>One API that picks a backend per environment: tqdm, rich, ipywidgets, marimo or a text fallback. Alpha.</td><td>Environment detection for marimo, Colab, Kaggle, VS Code notebooks, Jupyter, Spyder, Databricks, Pyodide, IPython terminal, terminal, non-TTY. Sticky <code>fail()</code> state. Override by argument, environment variable or module default, in that order.</td></tr>
+      <tr><td>wigglystuff</td><td>0.5.38 · Nov 2026</td><td>A collection of anywidgets that includes a simple <code>ProgressBar</code> (value, max, colour, size).</td><td>In marimo script mode it mirrors each value change into a rich terminal bar when rich is installed. No iterator wrapper, no ETA in the browser.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Notebook and app frameworks</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Where</th><th>Mechanism</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>tqdm.notebook</td><td>ipywidgets <code>HBox</code> of label, <code>FloatProgress</code> and text</td><td>Blue while running, green when done, red on error or interrupt. Does not close itself on exceptions. Prints the widget repr as text when the frontend has no widget support.</td></tr>
+      <tr><td>marimo</td><td><code>mo.status.progress_bar</code>, <code>mo.status.spinner</code></td><td>Title and subtitle, separate completion title, rate and ETA, <code>remove_on_exit</code>. Numeric updates limited to one per 150 ms; text changes go through at once.</td></tr>
+      <tr><td>IPython display handle</td><td><code>display(..., display_id=True)</code> then <code>update</code></td><td>Works wherever rich output works, with no widget manager. Used by Hugging Face transformers (with an update interval) and by ipypb (last release 2019).</td></tr>
+      <tr><td>Streamlit, Gradio, Panel <span class="dag">†</span></td><td>Framework components</td><td><code>st.progress</code> with text; <code>gr.Progress</code> which can track tqdm; Panel's <code>Tqdm</code> indicator.</td></tr>
+      <tr><td>Keras, Lightning <span class="dag">†</span></td><td>Training callbacks</td><td>Bars carry live metrics next to progress, one bar per epoch plus a total. The metrics postfix is the feature users rely on.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Other languages</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Library</th><th>Language</th><th>Design points</th></tr></thead>
+    <tbody>
+      <tr><td>indicatif</td><td>Rust</td><td>One type for bars and spinners. Template strings with keys for position, bytes, ETA and rate. Draws to stderr, hidden entirely when no terminal is attached. <code>MultiProgress</code> for threads. Human formatting helpers for bytes, counts and durations. An in-memory terminal for tests. Used by uv <span class="dag">†</span>.</td></tr>
+      <tr><td>std.Progress</td><td>Zig</td><td>A tree of nodes in 200 preallocated slots, lock-free, so reporting cannot fail or allocate. A timer thread draws after an initial delay. Child processes send their subtree over a pipe named in <code>ZIG_PROGRESS</code>, and the process that owns the terminal draws everything. Each frame is wrapped in synchronized output. Measured cost about 1%.</td></tr>
+      <tr><td>mpb</td><td>Go</td><td>Many bars with priorities, queued bars that take over a finished bar's slot, dynamic totals, decorators before and after the bar, 150 ms refresh, automatic refresh off when not a terminal.</td></tr>
+      <tr><td>bubbles/progress</td><td>Go</td><td>Half-block characters with separate foreground and background colours for a gradient at twice the cell resolution. Changes animate with a damped spring at 60 fps.</td></tr>
+      <tr><td>schollz/progressbar, cheggaaa/pb <span class="dag">†</span></td><td>Go</td><td>Simple single bars with <code>io.Writer</code> wrappers for byte streams.</td></tr>
+      <tr><td>cli-progress</td><td>Node</td><td>Single and multi bar, 10 fps, format tokens plus custom payload. <code>noTTYOutput</code> writes a line every 2000 ms to non-TTY streams. <code>gracefulExit</code> restores the cursor on SIGINT.</td></tr>
+      <tr><td>listr2, ora</td><td>Node</td><td>listr2 is a task list with pluggable renderers and an explicit fallback renderer (verbose lines) for non-TTY; a silent renderer too. ora is a single spinner.</td></tr>
+      <tr><td>NProgress <span class="dag">†</span></td><td>Browser</td><td>The thin top-of-page bar that "trickles" forward by random small amounts when no real progress is known. Honest only as an activity indicator.</td></tr>
+      <tr><td>progressr</td><td>R</td><td>Developers call a progressor; the end user decides if, when and how it is shown by choosing handlers (cli, progress, beepr sound, notifications, several at once). Off by default. Ordinary output is buffered and released before the next redraw. "Sticky" messages stay above the bar. Works across parallel futures.</td></tr>
+      <tr><td>cli (R)</td><td>R</td><td>Bars appear only after <code>show_after</code> (2 s). Timer ticks every 200 ms on a dynamic terminal and every 3000 ms otherwise.</td></tr>
+      <tr><td>ProgressMeter.jl</td><td>Julia</td><td>Three meters: <code>Progress</code> (known steps), <code>ProgressUnknown</code> (counter with spinner, replaced by a check mark at the end) and <code>ProgressThresh</code> (converging towards a tolerance). <code>showvalues</code> prints metrics below the bar and can be a function evaluated only when drawing. Thread-safe. Workers report through a channel.</td></tr>
+      <tr><td>ProgressLogging.jl</td><td>Julia</td><td>Progress is a kind of log record. The package defines the records and draws nothing; the terminal logger, VS Code, Pluto and Juno each render them their own way.</td></tr>
+      <tr><td>Foundation Progress <span class="dag">†</span></td><td>Swift, Obj-C</td><td>Total and completed unit counts, indeterminate when the total is negative. A parent assigns each child a share of its own units, so library code reports progress without knowing its caller. Cancel and pause are requests the worker handles. Observable. Can be published across processes.</td></tr>
+      <tr><td>Spectre.Console <span class="dag">†</span></td><td>.NET</td><td>Column-based progress like rich, with indeterminate tasks and auto-clear. Falls back to plain lines on non-interactive consoles.</td></tr>
+      <tr><td>indicators, progressbar <span class="dag">†</span></td><td>C++, Java</td><td>Builder-style options. Java's <code>me.tongfei.progressbar</code> wraps iterators and streams.</td></tr>
+      <tr><td>tty-progressbar, ruby-progressbar <span class="dag">†</span></td><td>Ruby</td><td>Format tokens, multi bars, rate smoothing.</td></tr>
+      <tr><td>Symfony ProgressBar <span class="dag">†</span></td><td>PHP</td><td>Verbosity-dependent formats; redraw frequency limits; on non-decorated output it prints a new line at intervals.</td></tr>
+      <tr><td>Write-Progress <span class="dag">†</span></td><td>PowerShell</td><td>Progress is a stream of records with an id and parent id, rendered by the host. Another instance of reporting separated from rendering.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Command-line tools</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Tool</th><th>Behaviour</th></tr></thead>
+    <tbody>
+      <tr><td>Docker BuildKit</td><td><code>--progress=auto|plain|tty|rawjson</code>, also by environment variable. <code>plain</code> is for people reading logs, <code>rawjson</code> for programs. Asking for <code>tty</code> without one is an error.</td></tr>
+      <tr><td>Cargo</td><td><code>term.progress.when = auto|always|never</code>, a width setting, and <code>term-integration</code> to report progress to the terminal emulator (auto-detected).</td></tr>
+      <tr><td>apt, dpkg <span class="dag">†</span></td><td>A bar pinned to the last terminal row by a scroll region while package logs scroll above.</td></tr>
+      <tr><td>ninja <span class="dag">†</span></td><td>One status line <code>[done/total] action</code> overwritten on smart terminals, one line per action otherwise. Failed command output is printed in full.</td></tr>
+      <tr><td>curl, wget, rsync, pv <span class="dag">†</span></td><td>Byte-oriented meters with rate and ETA on stderr. <code>pv</code> shows a bar for any pipe, which tqdm copies with <code>python -m tqdm</code>.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="patterns">
+  <h2>Patterns the good ones share</h2>
+
+  <h3>Three entry points to one object</h3>
+  <p>Wrap an iterable, use a context manager with manual updates, or hold a handle and close it yourself. tqdm, rich, marimo and everbar all offer the first two. The iterable wrapper needs <code>total=</code> for generators, and should take <code>len()</code> or a length hint when available. Updates are relative (<code>update(n)</code>) and absolute (<code>completed=</code>); both are needed, the second for callbacks that report a position.</p>
+
+  <h3>Reporting separated from rendering</h3>
+  <p>This is the strongest recurring idea and it comes from several directions. progressr states it as a rule: the developer says where progress happens, the user decides how it is shown. ProgressLogging.jl makes progress a log record. Foundation <code>Progress</code> and PowerShell make it an observable object or record that a host renders. Zig sends it over a pipe to whichever process owns the terminal. BuildKit can emit raw JSON events. In each case the work code holds a small state object (completed, total, description, parent) and knows nothing about terminals.</p>
+
+  <h3>Throttling</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Library</th><th>Redraw limit</th><th>How</th></tr></thead>
+    <tbody>
+      <tr><td>tqdm</td><td>10 per second</td><td>In the loop, with an iteration-count gate tuned at run time so the clock is rarely read. Monitor thread forces a redraw at least every 10 s.</td></tr>
+      <tr><td>rich</td><td>10 per second</td><td>Background thread.</td></tr>
+      <tr><td>cli-progress</td><td>10 fps</td><td>Timer, plus a synchronous redraw when updates are overdue.</td></tr>
+      <tr><td>mpb</td><td>every 150 ms</td><td>Render goroutine.</td></tr>
+      <tr><td>marimo</td><td>every 150 ms</td><td>Numeric updates only; text is immediate.</td></tr>
+      <tr><td>alive-progress</td><td>adaptive, up to about 60 fps</td><td>Thread whose rate follows throughput.</td></tr>
+      <tr><td>R cli</td><td>200 ms, or 3000 ms without a dynamic terminal</td><td>Timer.</td></tr>
+    </tbody>
+  </table></div>
+  <p>Two models exist: redraw from inside the loop when enough time has passed, or redraw from a timer thread that reads shared state. The first costs nothing when idle but freezes the display during a slow iteration. The second keeps clocks and spinners alive and needs a lock or atomics. tqdm uses the first with a thread as a safety net.</p>
+
+  <h3>Hierarchy</h3>
+  <p>Nested loops are the common case (epochs and batches, files and chunks). tqdm stacks bars by position and drops inner bars when they finish. rich holds tasks in one table. fastprogress has an explicit master and child. Foundation and Zig model a real tree, and Foundation's weighted children let a parent bar advance smoothly while a child works, which no Python library does well.</p>
+
+  <h3>Threads and processes</h3>
+  <p>Within a process the state object needs to be safe to update from threads (indicatif, ProgressMeter.jl, rich). Across processes there are three approaches: a shared lock and fixed screen positions (tqdm), a channel or queue back to one drawing process (ProgressMeter.jl, atpbar, progressr with futures), or a pipe protocol (Zig). The first is fragile. The second maps directly onto a widget, which has exactly one place to draw.</p>
+
+  <h3>Living with print and logging</h3>
+  <p>A redrawn line and ordinary output corrupt each other. The fixes, in rising order of intrusion: a write method that clears, prints and redraws (<code>tqdm.write</code>, indicatif <code>println</code>, cli-progress <code>log</code>); a logging handler that routes through it; replacing <code>sys.stdout</code> while the bar is live (rich, alive-progress); buffering output until the next redraw (progressr); or a scroll region so the two never share a line (enlighten, apt). In a notebook widget the problem disappears, because the widget is its own output.</p>
+
+  <h3>Start, end and failure</h3>
+  <ul>
+    <li><strong>Delayed start.</strong> R cli and Zig do not draw until the task has run long enough to deserve it.</li>
+    <li><strong>Leave or clear.</strong> tqdm <code>leave</code>, rich <code>transient</code>, marimo <code>remove_on_exit</code>. The usual default is to keep the outer bar and remove inner ones.</li>
+    <li><strong>A final line worth keeping.</strong> alive-progress prints a receipt. Evil Martians recommend changing "Downloading" to "Downloaded" and clearing spinner artefacts.</li>
+    <li><strong>Distinct end states.</strong> Running, succeeded, failed, interrupted, and sometimes warning. tqdm.notebook uses colour, Carbon adds an icon and text, everbar has a sticky failed state, OSC 9;4 has error and warning states.</li>
+    <li><strong>Logs on failure.</strong> clig.dev: hiding output behind a bar is fine on success, but on error print what was hidden.</li>
+  </ul>
+
+  <h3>Unknown and changing totals</h3>
+  <p>Without a total the honest display is a counter, a rate and elapsed time, with an activity animation (tqdm, alive-progress "unknown" mode, <code>ProgressUnknown</code>). A total may arrive later (rich <code>start_task</code>, mpb <code>SetTotal</code>) or grow during the run (a recursive file walk). Apple's guidance is to switch from indeterminate to determinate as soon as the total is known. Julia's <code>ProgressThresh</code> covers a third case: convergence towards a threshold, where progress is a distance and not a count.</p>
+
+  <h3>Degrading by environment</h3>
+<pre class="term" aria-label="Four levels of output"><span class="lab">notebook frontend</span>   widget: animated bar, ticking clock, end-state colour, text for screen readers
+<span class="lab">interactive TTY</span>     Loading:  25%|<span class="fill">████████▏</span><span class="dim">                        </span>| 2500/10000 [00:11&lt;00:33, 227 it/s]
+<span class="lab">pipe, file, CI</span>      Loading: 2500/10000 (25%) 00:11 elapsed, about 00:33 left
+                    Loading: 5000/10000 (50%) 00:22 elapsed, about 00:22 left
+                    <span class="ok">Loaded 10000 in 00:44 (227 it/s)</span>
+<span class="lab">disabled, quiet</span>     (nothing)</pre>
+  <p>The switches people expect: TTY detection per stream, <code>NO_COLOR</code>, <code>TERM=dumb</code>, a <code>CI</code> variable, a package-specific environment variable to force a mode (tqdm, everbar, cargo, BuildKit), and an argument that overrides all of them. The non-TTY line interval in the wild is 2 to 3 seconds (cli-progress 2000 ms, R cli 3000 ms); for CI logs something slower or percentage-stepped is kinder.</p>
+</section>
+
+<section id="terminal">
+  <h2>Terminal rendering techniques</h2>
+  <ul>
+    <li><strong>Redraw.</strong> One line: carriage return and erase-to-end. Several lines: cursor up by the number of lines last drawn, then clear to end of screen, with the new frame built completely before writing (Zig). tqdm documents consoles where cursor-up does not work (IDLE, some IDE consoles), so nested bars must degrade.</li>
+    <li><strong>Synchronized output.</strong> Wrapping a frame in <code>ESC[?2026h</code> and <code>ESC[?2026l</code> lets supporting terminals present it atomically and removes flicker. Support can be queried; tmux forwards it only in recent versions and GNU Screen does not support it.</li>
+    <li><strong>Sub-cell resolution.</strong> The left block elements <code>▏▎▍▌▋▊▉█</code> give eight steps per cell, so a 30-cell bar has 240 positions. tqdm falls back to <code>" 123456789#"</code> for ASCII. Legacy Windows consoles and some fonts need the ASCII path.</li>
+    <li><strong>Colour.</strong> Half blocks with foreground and background colours give a gradient at twice the cell resolution (bubbles). Sticking to the 16 ANSI colours leaves contrast to the user's terminal theme (GitHub CLI).</li>
+    <li><strong>Width.</strong> Read the terminal size on each draw or on resize; fall back to 80 columns. Measure wide and combining characters by display cells, not code points (alive-progress built a "cell architecture" for this). Truncate the description, never the numbers.</li>
+    <li><strong>Stream.</strong> Draw on stderr so stdout stays pipeable (indicatif, tqdm, clig.dev).</li>
+    <li><strong>Cursor.</strong> Hide while drawing and restore on every exit path, including SIGINT.</li>
+    <li><strong>Terminal progress reporting.</strong> <code>ESC ] 9 ; 4 ; state ; percent BEL</code> sets a progress indicator in the tab and taskbar. States: 0 clear, 1 normal, 2 error, 3 indeterminate, 4 warning. It started in ConEmu and is documented by Windows Terminal and iTerm2; Cargo emits it after auto-detecting the terminal, and pytest and LLDB have added it. Send it only to terminals known to support it, because OSC 9 also means "notification" in iTerm2's older usage, and always send state 0 at the end.</li>
+  </ul>
+</section>
+
+<section id="notebook">
+  <h2>Notebook rendering</h2>
+  <h3>What goes wrong today</h3>
+  <ul>
+    <li><strong>No widget frontend.</strong> Without ipywidgets or its JavaScript the output is the text <code>HBox(children=(…))</code> or "IProgress not found". This is the most reported tqdm notebook problem.</li>
+    <li><strong>Saved and exported notebooks.</strong> A widget is visible later only if the frontend saved widget state. GitHub and nbviewer show a "failed to display" message or the text repr.</li>
+    <li><strong>Exceptions.</strong> <code>tqdm.notebook</code> does not close the bar when the loop raises, so it stays in the running colour.</li>
+    <li><strong>Mixed machinery.</strong> rich's live display in Jupyter has had double-render bugs and does not auto-refresh there.</li>
+    <li><strong>marimo.</strong> Its own progress bar is good but exists only inside marimo.</li>
+  </ul>
+  <h3>What anywidget changes</h3>
+  <p>An anywidget front-end module has a small contract: <code>render({ model, el })</code>, <code>model.get</code> and <code>model.on("change:…")</code>, and custom messages. The anywidget library hosts it in Jupyter Notebook, JupyterLab, Colab and VS Code, and marimo implements the same interface natively. One JavaScript bundle therefore covers the environments that everbar needs five backends for.</p>
+  <p>A browser renderer can also do things the kernel cannot do cheaply. These are design inferences from the research above, not features I found in an existing library:</p>
+  <ul>
+    <li>Animate between sparse updates. The kernel sends state a few times per second; the browser eases the bar and ticks the elapsed and remaining clocks every frame, so the bar never looks frozen during a slow iteration.</li>
+    <li>Notice a stall on its own. If no update arrives for much longer than the recent interval, the widget can say so, even while the kernel is busy and silent.</li>
+    <li>Apply the cheap perceptual gains: backwards-moving ribbing while running, none when reduced motion is requested.</li>
+    <li>Expose proper semantics: a named progressbar role, value text, and a text statement of failure.</li>
+  </ul>
+  <h3>The display-handle alternative</h3>
+  <p>IPython's <code>display(..., display_id=True)</code> followed by <code>update()</code> replaces an output in place using plain HTML. It needs no widget manager and the last frame is stored in the notebook file as ordinary output, so it survives saving and export. fastprogress and Hugging Face transformers use it. It is one-way: no browser-side clock, no interaction. It is a candidate for the level between "widget" and "terminal", and for writing a final static snapshot.</p>
+</section>
+
+<section id="implications">
+  <h2>Implications for anyprogressbar</h2>
+  <p>These are recommendations drawn from the survey, ordered by how much of the design depends on them.</p>
+  <ol>
+    <li><strong>Build a renderer-independent core.</strong> A plain Python state object (completed, total, description, unit, parent, status, timestamps, metrics) with an estimator, and renderers that subscribe to it: widget, TTY, log lines, null. The core must import neither anywidget nor traitlets, so scripts and CI start fast. anytimeline already keeps its anywidget import inside <code>widget.py</code>; the same split applies here.</li>
+    <li><strong>Pick the renderer once, by environment, with overrides.</strong> Order: explicit argument, environment variable, module default, detection. Detection distinguishes a notebook kernel with a frontend, marimo, an interactive TTY, and everything else.</li>
+    <li><strong>Make every level of the ladder a designed output.</strong> The log-line mode and the final summary line deserve as much care as the widget, because CI logs are where bars are read most often after the fact.</li>
+    <li><strong>Keep the hot path trivial.</strong> Per-iteration cost should be an integer add and a counter comparison, with the clock read only every so many iterations (tqdm's dynamic gate). Rendering and comm messages are throttled to about 10 per second in a TTY and fewer to a widget, since the browser interpolates.</li>
+    <li><strong>Be honest, and be smooth only in the browser.</strong> Report real progress, monotonically. Easing between two real values is presentation; inventing progress is not. Do not implement accelerating or "trickle" bars.</li>
+    <li><strong>Treat ETA as optional output with a quality bar.</strong> Time-weighted, debiased average; nothing shown until it is stable; coarse rounding; stall message instead of a countdown past zero.</li>
+    <li><strong>First-class states.</strong> Pending, running, succeeded, failed, interrupted, and indeterminate. The iterator wrapper and context manager set failed or interrupted in a <code>finally</code>, which fixes the stuck-blue-bar problem. Failure is stated in text as well as colour.</li>
+    <li><strong>Respect the time thresholds.</strong> A <code>delay</code> option so fast loops draw nothing; consider making a short delay the default in terminals.</li>
+    <li><strong>Leave a durable record.</strong> When the bar finishes, write a static snapshot (text and HTML) as the saved representation, so the notebook file and exports show "Loaded 10000 in 00:44" instead of a dead widget.</li>
+    <li><strong>Nesting as a tree.</strong> Children know their parent; the TTY renderer stacks or collapses them, the widget lays them out, the log renderer prefixes them. Weighted children can come later, but the data model should allow it from the start.</li>
+    <li><strong>Text beside the bar.</strong> Description, current item, and a small set of live metrics (the postfix that training loops rely on).</li>
+    <li><strong>Small extras with good cost-benefit.</strong> OSC 9;4 for supporting terminals, a <code>write()</code> method and logging handler for TTY mode, byte and count formatting helpers, an in-memory terminal for tests as indicatif has.</li>
+  </ol>
+</section>
+
+<section id="open">
+  <h2>Open questions to settle before implementing</h2>
+  <ul>
+    <li><strong>Decided: anywidget is an optional extra, and the documented install includes it.</strong> The README leads with <code>pip install "anyprogressbar[widget]"</code>; the bare install serves scripts, CI and libraries. In a notebook without the extra the bar must not fail or print a widget repr: it falls back to a plain HTML bar through a display handle and says once how to install the widget.</li>
+    <li><strong>How does an anywidget appear mid-cell in each host?</strong> Jupyter displays on <code>display()</code> and applies comm updates while the cell runs. marimo normally renders a cell's final expression, and wigglystuff wraps its bar in <code>mo.ui.anywidget</code>. This needs a spike in JupyterLab, VS Code, Colab and marimo before the API is fixed.</li>
+    <li><strong>What does a saved notebook contain?</strong> Verify what anywidget writes as fallback output and whether a final display-handle snapshot can replace or accompany the widget view.</li>
+    <li><strong>Thread or no thread in the terminal?</strong> In-loop redraw is simplest. A timer thread keeps the clock alive during slow iterations and is needed for a spinner.</li>
+    <li><strong>How are several bars laid out?</strong> One widget per bar (simple, matches tqdm) or one widget that owns a tree of bars (better nesting, one comm, more front-end work).</li>
+    <li><strong>How far to go on multiprocessing</strong> in a first version: thread-safe only, or a queue-based reporter for worker processes.</li>
+    <li><strong>tqdm compatibility.</strong> Many libraries accept a tqdm-like object. Matching the common subset (<code>update</code>, <code>set_description</code>, <code>set_postfix</code>, <code>close</code>, <code>total</code>, <code>n</code>) would let anyprogressbar be passed where tqdm is expected.</li>
+    <li><strong>Should library authors be able to report without choosing a display</strong>, in the progressr sense: off unless the end user enables a handler?</li>
+  </ul>
+</section>
+
+<section id="sources">
+  <h2>Sources</h2>
+  <ul class="sources">
+    <li>Myers, B. (1985). The importance of percent-done progress indicators for computer-human interfaces. CHI '85. Read through secondary accounts: <a href="https://en.wikipedia.org/wiki/Progress_bar">Wikipedia</a>, <a href="https://www.process.st/loading-time/">process.st</a>.</li>
+    <li>Harrison, Amento, Kuznetsov, Bell (2007). <a href="https://chrisharrison.net/projects/progressbars/ProgBarHarrison.pdf">Rethinking the Progress Bar</a>. UIST '07. Full text read.</li>
+    <li>Harrison, Yeo, Hudson (2010). <a href="https://chrisharrison.net/projects/progressbars2/ProgressBarsHarrison.pdf">Faster Progress Bars</a>. CHI '10. Full text read.</li>
+    <li><a href="https://arxiv.org/abs/2211.13909">The Magic of Slow-to-Fast and Constant: Evaluating Time Perception of Progress Bars by Bayesian Model</a> (2022). Abstract.</li>
+    <li>Villar, Callegaro, Yang (2013). <a href="https://openaccess.city.ac.uk/id/eprint/14427/">Where Am I? A Meta-Analysis of Experiments on the Effects of Progress Indicators for Web Surveys</a>. Abstract.</li>
+    <li>Buell, Norton (2011). <a href="https://pubsonline.informs.org/doi/10.1287/mnsc.1110.1376">The Labor Illusion</a>. Management Science. Abstract.</li>
+    <li>Hohenstein et al. (2016). Shorter Wait Times. CHI EA '16, <a href="https://dblp.uni-trier.de/rec/conf/chi/HohensteinKCTC16.html">doi 10.1145/2851581.2892308</a>. Secondary accounts.</li>
+    <li>Viget, <a href="https://viget.com/articles/a-bone-to-pick-with-skeleton-screens">A Bone to Pick with Skeleton Screens</a>.</li>
+    <li>Nielsen Norman Group, <a href="https://www.nngroup.com/articles/progress-indicators/">Progress Indicators Make a Slow System Less Insufferable</a>; <a href="https://www.nngroup.com/topic/response-time/">response time limits</a>.</li>
+    <li>Maister (1985). <a href="https://davidmaister.com/?p=328">The Psychology of Waiting Lines</a>. Via summaries.</li>
+    <li>Chaudhuri, Narasayya, Ramamurthy (2004). <a href="https://www.microsoft.com/en-us/research/publication/estimating-progress-of-execution-for-sql-queries/">Estimating Progress of Execution for SQL Queries</a>; Chaudhuri, Kaushik, Ramamurthy (2005). When Can We Trust Progress Estimators for SQL Queries? Abstracts.</li>
+    <li>Raymond Chen, <a href="https://devblogs.microsoft.com/oldnewthing/20100525-00/?p=13933">The Old New Thing</a> on the copy dialog. Via search summary.</li>
+    <li>Sampath, Merrick, Macvean (2021). <a href="https://research.google/pubs/accessibility-of-command-line-interfaces/">Accessibility of Command Line Interfaces</a>. CHI '21. Abstract.</li>
+    <li>GitHub, <a href="https://github.blog/engineering/user-experience/building-a-more-accessible-github-cli/">Building a more accessible GitHub CLI</a>.</li>
+    <li>MDN, <a href="https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Roles/progressbar_role">ARIA progressbar role</a>; Carbon, <a href="https://carbondesignsystem.com/components/progress-bar/usage/">progress bar usage</a> and <a href="https://carbondesignsystem.com/components/progress-bar/accessibility/">accessibility</a>.</li>
+    <li><a href="https://clig.dev/">Command Line Interface Guidelines</a>; Evil Martians, <a href="https://evilmartians.com/chronicles/cli-ux-best-practices-3-patterns-for-improving-progress-displays">3 patterns for improving progress displays</a>.</li>
+    <li><a href="https://github.com/tqdm/tqdm">tqdm README</a>; <a href="https://rich.readthedocs.io/en/stable/progress.html">rich progress docs</a>; <a href="https://github.com/rsalmei/alive-progress">alive-progress README</a>; <a href="https://github.com/Rockhopper-Technologies/enlighten">enlighten README</a>; <a href="https://github.com/AnswerDotAI/fastprogress">fastprogress README</a>; <a href="https://progressbar-2.readthedocs.io/en/latest/widgets/smoothing-eta.html">progressbar2 SmoothingETA</a>.</li>
+    <li><a href="https://pypi.org/project/everbar/">everbar</a>; <a href="https://pypi.org/project/tldm/">tldm</a>; <a href="https://koaning.github.io/wigglystuff/reference/progress-bar">wigglystuff ProgressBar</a>; <a href="https://docs.marimo.io/api/status/">marimo status API</a>; <a href="https://github.com/Evfro/ipypb/">ipypb</a>; <a href="https://anywidget.dev/en/afm/">anywidget front-end module spec</a>.</li>
+    <li><a href="https://docs.rs/indicatif/latest/indicatif/">indicatif docs</a>, estimator discussion in <a href="https://github.com/console-rs/indicatif/issues/534">issue 534</a> and <a href="https://github.com/console-rs/indicatif/pull/539">PR 539</a>.</li>
+    <li>Andrew Kelley, <a href="https://andrewkelley.me/post/zig-new-cli-progress-bar-explained.html">Zig's New CLI Progress Bar Explained</a>.</li>
+    <li><a href="https://pkg.go.dev/github.com/vbauerster/mpb/v8">mpb</a>; <a href="https://github.com/charmbracelet/bubbles/blob/main/progress/progress.go">bubbles progress source</a>; <a href="https://github.com/npkgz/cli-progress">cli-progress README</a>.</li>
+    <li><a href="https://progressr.futureverse.org/">progressr</a>; <a href="https://cli.r-lib.org/articles/progress-advanced.html">R cli advanced progress</a>; <a href="https://github.com/timholy/ProgressMeter.jl">ProgressMeter.jl</a>; <a href="https://github.com/JuliaLogging/ProgressLogging.jl">ProgressLogging.jl</a>.</li>
+    <li>Microsoft, <a href="https://learn.microsoft.com/en-us/windows/terminal/tutorials/progress-bar-sequences">progress bar sequences in Windows Terminal</a>; <a href="https://iterm2.com/3.6/documentation-escape-codes.html">iTerm2 escape codes</a>; <a href="https://doc.rust-lang.org/cargo/reference/config.html">Cargo configuration</a>; <a href="https://gist.github.com/christianparpart/d8a62cc1ab659194337d73e399004036">synchronized output specification</a>.</li>
+  </ul>
+</section>
+
+</div>
+
+<script>
+(function () {
+  var PI = Math.PI;
+  var fns = [
+    { n: "Fast Power", g: "fast", f: function (x) { return Math.pow(x + (1 - x) / 2, 8); } },
+    { n: "Power", g: "fast", f: function (x) { return Math.pow(x + (1 - x) * 0.03, 2); } },
+    { n: "Linear", g: "near", f: function (x) { return x; } },
+    { n: "Early Pause", g: "near", f: function (x) { return x + (1 - Math.sin(x * PI * 2 + PI / 2)) / -8; } },
+    { n: "Inverse Power", g: "near", f: function (x) { return 1 - Math.pow(1 - x, 1.5); } },
+    { n: "Inv. Fast Power", g: "near", f: function (x) { return 1 - Math.pow(1 - x, 3); } },
+    { n: "Late Pause", g: "slow", f: function (x) { return x + (1 - Math.sin(x * PI * 2 + PI / 2)) / 8; } },
+    { n: "Slow Wavy", g: "slow", f: function (x) { return x + Math.sin(x * PI * 5) / 20; } },
+    { n: "Fast Wavy", g: "slow", f: function (x) { return x + Math.sin(x * PI * 20) / 80; } }
+  ];
+  var labels = { fast: "felt faster", near: "about linear", slow: "felt slower" };
+  var clamp = function (v) { return Math.max(0, Math.min(1, v)); };
+  var host = document.getElementById("fns");
+  var fills = [];
+  fns.forEach(function (fn) {
+    var d = "";
+    for (var i = 0; i <= 40; i++) {
+      var x = i / 40;
+      d += (i ? "L" : "M") + (2 + x * 60).toFixed(1) + " " + (26 - clamp(fn.f(x)) * 24).toFixed(1);
+    }
+    var row = document.createElement("div");
+    row.className = "fn";
+    row.innerHTML =
+      "<span>" + fn.n + "</span>" +
+      '<svg viewBox="0 0 64 28" role="img" aria-label="Progress against time for ' + fn.n + '"><line x1="2" y1="26" x2="62" y2="26"></line><path d="' + d + '"></path></svg>' +
+      '<div class="track"><i></i></div>' +
+      '<span class="tag ' + fn.g + '">' + labels[fn.g] + "</span>";
+    host.appendChild(row);
+    fills.push(row.querySelector("i"));
+  });
+  function draw(t) {
+    fns.forEach(function (fn, i) { fills[i].style.width = (clamp(fn.f(t)) * 100).toFixed(2) + "%"; });
+  }
+  draw(0.5);
+  var btn = document.getElementById("play");
+  var running = false;
+  btn.addEventListener("click", function () {
+    if (running) return;
+    running = true;
+    btn.textContent = "Running…";
+    var t0 = performance.now(), dur = 5500;
+    (function step(now) {
+      var t = Math.min(1, (now - t0) / dur);
+      draw(t);
+      if (t < 1) { requestAnimationFrame(step); }
+      else { running = false; btn.textContent = "Play again (5.5 s)"; }
+    })(t0);
+  });
+})();
+</script>

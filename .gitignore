@@ -1,0 +1,22 @@
+__pycache__/
+*.py[cod]
+.venv/
+.venv-*/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+node_modules/
+.DS_Store
+.ipynb_checkpoints/
+__marimo__/
+
+# built JavaScript bundle (npm run build in js/), once the widget exists
+src/anyprogressbar/static/
+
+# personal experiments (notebooks, scripts); not part of the project
+_scratch/
+
+# user documentation: the built site
+site/
