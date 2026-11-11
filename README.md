@@ -37,6 +37,11 @@ redrawn in place; in a pipe, a file or a CI job it becomes a line every few seco
 `ANYPROGRESSBAR=off` silences every bar, `log`, `terminal`, `notebook`, `widget` and `html`
 force one, and `write(...)` prints above live bars.
 
+Notebooks to run are in [`examples/`](examples/):
+[getting started](examples/getting_started.ipynb), [bars inside bars](examples/nested_bars.ipynb),
+[how a bar ends, and stalls](examples/endings_and_stalls.ipynb) and
+[where bars show](examples/where_bars_show.ipynb).
+
 The research behind the design is in
 [docs/research/progress-bar-research.html](docs/research/progress-bar-research.html), and the
 decisions in [docs/decisions](docs/decisions).
@@ -46,5 +51,6 @@ decisions in [docs/decisions](docs/decisions).
 ```bash
 (cd js && npm install && npm run build)   # the widget's bundle; npm test for its tests
 uv sync
+uv run nbstripout --install               # once per clone: commit notebooks without outputs
 uv run ruff check . && uv run ruff format --check . && uv run ty check && uv run pytest
 ```

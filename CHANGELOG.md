@@ -30,6 +30,7 @@ All notable changes to anyprogressbar. The format follows
   text, so the saved notebook needs no widget state. Used wherever anywidget is installed;
   without it the HTML bar says once how to get it.
 - `write(...)` prints above live bars.
+- Example notebooks in `examples/`, run by the tests.
 - The renderer is chosen by where the code runs (a notebook, a terminal, or anything else),
   by `set_renderer`, or by `ANYPROGRESSBAR=notebook|widget|html|terminal|log|off`. `CI`, `TERM=dumb` and `NO_COLOR`
   are respected.

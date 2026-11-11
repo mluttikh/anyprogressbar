@@ -46,6 +46,8 @@ dev = [
     "nbclient>=0.10",
     "marimo>=0.20",
     "anywidget>=0.9.13",
+    # notebooks are committed without outputs (`nbstripout --install`, once per clone)
+    "nbstripout>=0.9.1",
 ]
 
 [build-system]
@@ -103,6 +105,8 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
+# notebooks read as a user would write them: no annotations, loop variables with real names
+"examples/*" = ["ANN", "T20", "B007"]
 "tests/*" = [
     "ANN",
     "PT012",  # the block that raises is the bar's own `with` block: that is what is tested
