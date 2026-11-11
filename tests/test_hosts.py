@@ -26,6 +26,15 @@ CELLS = [
         "    bar.update(4)\n"
         "    raise ValueError('bad row')"
     ),
+    (
+        "from anyprogressbar import render\n"
+        "renderer = render.default_renderer()\n"
+        "with progress(total=3, desc='Live') as bar:\n"
+        "    time.sleep(0.6)\n"
+        "    bar.update()\n"
+        "    print(type(renderer).__name__, len(getattr(renderer, '_widgets', ())))\n"
+        "print(len(getattr(renderer, '_widgets', ())))"
+    ),
 ]
 
 
@@ -89,3 +98,17 @@ def test_in_marimo_the_bar_is_the_cells_output(tmp_path: Path):
     assert "In marimo" in markup
     assert "8/8 \\u00b7 done in 00:00" in markup or "8/8 · done in 00:00" in markup
     assert "In marimo:" not in run.stderr  # no log lines beside it
+
+
+def test_in_a_kernel_with_anywidget_the_running_bar_is_a_widget_and_the_record_is_not(executed):
+    pytest.importorskip("anywidget")
+    from anyprogressbar import widget
+
+    if not widget.available():
+        pytest.skip("the bundle is not built: npm run build in js/")
+    cell = executed.cells[4]
+    printed = "".join(o.text for o in cell.outputs if o.output_type == "stream")
+    assert printed.split() == ["WidgetRenderer", "1", "0"]  # one widget, closed at the end
+    (output,) = displays(cell)
+    assert sorted(output.data) == ["text/html", "text/plain"]
+    assert "1/3 · stopped after 00:00" in output.data["text/plain"]

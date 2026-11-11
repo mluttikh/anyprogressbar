@@ -142,19 +142,28 @@ class MarimoDisplay:
     those since the last moment that none was live."""
 
     def __init__(self) -> None:
-        self._shown: dict[int, str] = {}
+        self._shown: dict[int, Any] = {}  # HTML, or something else marimo can show (a widget)
         self._live: set[int] = set()
 
     def put(self, root_id: int, data: dict[str, str], *, final: bool) -> None:
+        self.show(root_id, data["text/html"], final=final)
+
+    def show(self, root_id: int, item: Any, *, final: bool) -> None:
         import marimo
 
         if root_id not in self._shown and not self._live:
             self._shown.clear()
-        self._shown[root_id] = data["text/html"]
+        self._shown[root_id] = item
         self._live.add(root_id)
         if final:
             self._live.discard(root_id)
-        marimo.output.replace(marimo.Html("".join(self._shown.values())))
+        items = list(self._shown.values())
+        if all(isinstance(item, str) for item in items):
+            marimo.output.replace(marimo.Html("".join(items)))
+        else:
+            marimo.output.replace(
+                marimo.vstack([marimo.Html(i) if isinstance(i, str) else i for i in items])
+            )
 
 
 class NotebookRenderer:

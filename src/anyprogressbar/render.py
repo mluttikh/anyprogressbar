@@ -2,7 +2,8 @@
 
 A bar knows nothing of terminals or notebooks. Its root hands a `Snapshot` to a renderer, at
 most every `min_interval` seconds and at each start and end. So far: nothing, log lines, and
-the terminal line (`terminal.py`). The notebook's HTML and the widget come next.
+the terminal line (`terminal.py`), the notebook's HTML (`notebook.py`) and its widget
+(`widget.py`).
 """
 
 from __future__ import annotations
@@ -124,7 +125,12 @@ def final_line(root: Snapshot) -> str:
 
 
 ENV = "ANYPROGRESSBAR"
-NAMES = ("notebook", "terminal", "log", "off")
+NAMES = ("notebook", "widget", "html", "terminal", "log", "off")
+# said once, under the first bar of a notebook that has no widget
+WIDGET_NOTE = (
+    "This bar only moves when the loop reports. For one that keeps time by itself: "
+    'pip install "anyprogressbar[widget]"'
+)
 _default: Renderer | None = None
 _shared: dict[str, Renderer] = {}
 
@@ -136,7 +142,18 @@ def _make(name: str) -> Renderer:
             from anyprogressbar.terminal import TerminalRenderer
 
             _shared[name] = TerminalRenderer()
-        elif name == "notebook":
+        elif name == "notebook":  # the widget where there is one, else HTML that says so
+            from anyprogressbar import widget
+            from anyprogressbar.notebook import NotebookRenderer
+
+            if widget.available():
+                return _make("widget")
+            _shared[name] = NotebookRenderer(note=WIDGET_NOTE)
+        elif name == "widget":
+            from anyprogressbar.widget import WidgetRenderer
+
+            _shared[name] = WidgetRenderer()
+        elif name == "html":
             from anyprogressbar.notebook import NotebookRenderer
 
             _shared[name] = NotebookRenderer()
@@ -146,8 +163,9 @@ def _make(name: str) -> Renderer:
 
 
 def set_renderer(renderer: Renderer | str | None) -> None:
-    """The renderer for bars that are given none: an object, a name ("terminal", "log",
-    "off"), or None to choose by the environment again."""
+    """The renderer for bars that are given none: an object, a name ("notebook", "widget",
+    "html", "terminal", "log", "off"), or None to choose by the environment again.
+    "notebook" is the widget where anywidget is installed, and plain HTML where it is not."""
     global _default  # noqa: PLW0603
     if isinstance(renderer, str):
         if renderer not in NAMES:

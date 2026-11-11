@@ -1,0 +1,19 @@
+{
+  "name": "@anyprogressbar/widget",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The notebook widget of anyprogressbar: an anywidget front-end module.",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/widget.ts src/widget.css --bundle --format=esm --target=es2022 --minify --outdir=../src/anyprogressbar/static",
+    "dev": "esbuild src/widget.ts src/widget.css --bundle --format=esm --target=es2022 --sourcemap=inline --outdir=../src/anyprogressbar/static --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.2"
+  }
+}

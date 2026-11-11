@@ -24,8 +24,13 @@ All notable changes to anyprogressbar. The format follows
   Jupyter kernel (through a display handle) and in marimo. What the notebook stores is HTML
   and text, so a saved or exported notebook shows how the work ended. Each bar is a named
   `progressbar` for screen readers, and a failure is said in words as well as in colour.
+- The notebook widget (the `widget` extra, an anywidget): one widget for a tree of bars. Its
+  clock ticks in the browser, so the elapsed time, the time remaining and a stall notice
+  keep up during one slow item. When the work ends the output becomes the plain HTML and
+  text, so the saved notebook needs no widget state. Used wherever anywidget is installed;
+  without it the HTML bar says once how to get it.
 - `write(...)` prints above live bars.
 - The renderer is chosen by where the code runs (a notebook, a terminal, or anything else),
-  by `set_renderer`, or by `ANYPROGRESSBAR=notebook|terminal|log|off`. `CI`, `TERM=dumb` and `NO_COLOR`
+  by `set_renderer`, or by `ANYPROGRESSBAR=notebook|widget|html|terminal|log|off`. `CI`, `TERM=dumb` and `NO_COLOR`
   are respected.
 - Progress in the tab or taskbar (OSC 9;4) in Windows Terminal, ConEmu and Ghostty.

@@ -2,7 +2,8 @@
 
 - Status: **partly implemented**, 11 November 2026: the plain HTML renderer (`notebook.py`,
   `tests/test_notebook.py`, and `tests/test_hosts.py`, which runs a real kernel and marimo).
-  The widget is not. The spike's code is in `_scratch/spike/` (not in the repository).
+  The widget followed in decision 0004, which changes one point below: a finished tree
+  keeps no widget view. The spike's code is in `_scratch/spike/` (not in the repository).
 - Tested: JupyterLab 4.6 (ipywidgets 8.1, anywidget 0.11) and marimo 0.25, in Chrome.
   **Not tested: VS Code notebooks and Colab.**
 

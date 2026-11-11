@@ -12,7 +12,7 @@ node_modules/
 .ipynb_checkpoints/
 __marimo__/
 
-# built JavaScript bundle (npm run build in js/), once the widget exists
+# built JavaScript bundle (npm run build in js/)
 src/anyprogressbar/static/
 
 # personal experiments (notebooks, scripts); not part of the project

@@ -27,6 +27,7 @@ widget = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "anywidget" },
     { name = "ipykernel" },
     { name = "marimo" },
     { name = "nbclient" },
@@ -41,6 +42,7 @@ provides-extras = ["widget"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "anywidget", specifier = ">=0.9.13" },
     { name = "ipykernel", specifier = ">=6.29" },
     { name = "marimo", specifier = ">=0.20" },
     { name = "nbclient", specifier = ">=0.10" },

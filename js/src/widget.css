@@ -1,0 +1,91 @@
+/* The bars: one grid for a tree, so names, percentages, bars and numbers line up.
+   Text takes the host's colour; the status colours are mid-tones that read on light and
+   dark pages (the same as the static HTML in notebook.py). */
+.apb {
+  --apb-running: #1c7ed6;
+  --apb-done: #2f9e44;
+  --apb-failed: #e03131;
+  --apb-stopped: #e8930c;
+  --apb-pending: #868e96;
+  display: grid;
+  grid-template-columns: fit-content(18em) max-content minmax(60px, 240px) minmax(0, 1fr);
+  gap: 4px 10px;
+  align-items: center;
+  max-width: 860px;
+  font: 13px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.apb-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.apb-percent,
+.apb-numbers {
+  font-variant-numeric: tabular-nums;
+}
+.apb-percent {
+  text-align: right;
+}
+.apb-numbers {
+  opacity: 0.8;
+}
+.apb-numbers[data-status="failed"],
+.apb-numbers[data-status="stopped"],
+.apb-numbers[data-status="stalled"] {
+  opacity: 1;
+  font-weight: 600;
+}
+.apb-numbers[data-status="failed"] { color: var(--apb-failed); }
+.apb-numbers[data-status="stopped"],
+.apb-numbers[data-status="stalled"] { color: var(--apb-stopped); }
+
+.apb-track {
+  --apb-color: var(--apb-running);
+  height: 10px;
+  border-radius: 5px;
+  background: rgba(128, 128, 128, 0.28);
+  overflow: hidden;
+}
+.apb-track[data-status="done"] { --apb-color: var(--apb-done); }
+.apb-track[data-status="failed"] { --apb-color: var(--apb-failed); }
+.apb-track[data-status="stopped"] { --apb-color: var(--apb-stopped); }
+.apb-track[data-status="pending"] { --apb-color: var(--apb-pending); }
+
+.apb-fill {
+  width: 0;
+  height: 100%;
+  background-color: var(--apb-color);
+  /* eases between two real values; it never runs ahead of the work */
+  transition: width 0.25s linear;
+}
+/* While running: faint ribbing that moves against the direction of progress, which makes a
+   bar feel faster (Harrison, Yeo and Hudson, CHI 2010). */
+.apb-track[data-status="running"] .apb-fill {
+  background-image: linear-gradient(
+    -45deg,
+    rgba(255, 255, 255, 0.22) 25%, transparent 25%, transparent 50%,
+    rgba(255, 255, 255, 0.22) 50%, rgba(255, 255, 255, 0.22) 75%, transparent 75%
+  );
+  background-size: 20px 20px;
+  animation: apb-ribs 0.9s linear infinite;
+}
+/* Without a total: a block that runs along the track, claiming no value. */
+.apb-track.apb-moving .apb-fill {
+  width: 30%;
+  transition: none;
+  animation: apb-ribs 0.9s linear infinite, apb-run 1.6s ease-in-out infinite alternate;
+}
+@keyframes apb-ribs {
+  from { background-position: 20px 0; }
+  to { background-position: 0 0; }
+}
+@keyframes apb-run {
+  from { margin-left: 0; }
+  to { margin-left: 70%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .apb-fill { transition: none; }
+  .apb-track[data-status="running"] .apb-fill { animation: none; }
+  .apb-track.apb-moving .apb-fill { animation: none; width: 100%; opacity: 0.6; }
+}

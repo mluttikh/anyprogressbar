@@ -1,5 +1,5 @@
 # Checks on every push and pull request: lint, types and tests on Python 3.12 to 3.15,
-# on Linux and Windows.
+# on Linux and Windows, with the widget's bundle built; and the JavaScript's types and tests.
 name: CI
 
 on:
@@ -35,8 +35,34 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: js/package-lock.json
+      - name: Build the JavaScript bundle
+        run: npm ci && npm run build
+        working-directory: js
       - run: uv sync --python ${{ matrix.python }}
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run ty check
       - run: uv run pytest
+
+  javascript:
+    name: JavaScript
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: js
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: js/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build

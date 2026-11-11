@@ -9,7 +9,7 @@ def count(value: float) -> str:
     """A count without a needless decimal: 3, 2.5, 1200."""
     if float(value).is_integer():
         return str(int(value))
-    return f"{value:.3g}"
+    return f"{value:.0f}" if abs(value) >= 1000 else f"{value:.3g}"
 
 
 def elapsed(seconds: float) -> str:

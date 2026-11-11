@@ -1,0 +1,653 @@
+[
+ {
+  "name": "just started",
+  "bar": {
+   "id": 1,
+   "desc": "Load",
+   "n": 0,
+   "total": 100,
+   "unit": "it",
+   "status": "running",
+   "elapsed": 0.0,
+   "rate": null,
+   "remaining": null,
+   "since_progress": 0.0,
+   "message": "",
+   "leave": true,
+   "metrics": {},
+   "children": []
+  },
+  "stats": [
+   "0/100 · 00:00"
+  ],
+  "stalled": [
+   false
+  ]
+ },
+ {
+  "name": "running with an estimate",
+  "bar": {
+   "id": 1,
+   "desc": "Load",
+   "n": 40,
+   "total": 100,
+   "unit": "it",
+   "status": "running",
+   "elapsed": 20.0,
+   "rate": 2.0,
+   "remaining": 30.0,
+   "since_progress": 0.4,
+   "message": "",
+   "leave": true,
+   "metrics": {},
+   "children": []
+  },
+  "stats": [
+   "40/100 · 00:20 · about 30 s left · 2 it/s"
+  ],
+  "stalled": [
+   false
+  ]
+ },
+ {
+  "name": "the estimate rounds to the even neighbour",
+  "bar": {
+   "id": 1,
+   "desc": "Load",
+   "n": 40,
+   "total": 100,
+   "unit": "it",
+   "status": "running",
+   "elapsed": 20.0,
+   "rate": 2.0,
+   "remaining": 12.5,
+   "since_progress": 0.4,
+   "message": "",
+   "leave": true,
+   "metrics": {},
+   "children": []
+  },
+  "stats": [
+   "40/100 · 00:20 · about 12 s left · 2 it/s"
+  ],
+  "stalled": [
+   false
+  ]
+ },
+ {
+  "name": "half a minute left",
+  "bar": {
+   "id": 1,
+   "desc": "Load",
+   "n": 40,
+   "total": 100,
+   "unit": "it",
+   "status": "running",
+   "elapsed": 20.0,
+   "rate": 2.0,
+   "remaining": 27.5,
+   "since_progress": 0.4,
+   "message": "",
+   "leave": true,
+   "metrics": {},
+   "children": []
+  },
+  "stats": [
+   "40/100 · 00:20 · about 30 s left · 2 it/s"
+  ],
+  "stalled": [
+   false
+  ]
+ },
+ {
+  "name": "minutes left",
+  "bar": {
+   "id": 1,
+   "desc": "Load",
+   "n": 40,
+   "total": 100,
+   "unit": "it",
+   "status": "running",
+   "elapsed": 20.0,
+   "rate": 2.0,
+   "remaining": 150.0,
+   "since_progress": 0.4,
+   "message": "",
+   "leave": true,
+   "metrics": {},
+   "children": []
+  },
+  "stats": [
+   "40/100 · 00:20 · about 2 min left · 2 it/s"
+  ],
+  "stalled": [
+   false
+  ]
+ },
+ {
+  "name": "hours left",
+  "bar": {
+   "id": 1,
+   "desc": "Load",
+   "n": 40,
+   "total": 100,
+   "unit": "it",
+   "status": "running",
+   "elapsed": 20.0,
+   "rate": 0.004,
+   "remaining": 8000.0,
+   "since_progress": 0.4,
+   "message": "",
+   "leave": true,
+   "metrics": {},
+   "children": []
+  },
+  "stats": [
+   "40/100 · 00:20 · about 2 h 15 min left · 14.4 it/h"
+  ],
+  "stalled": [
+   false
+  ]
+ },
+ {
+  "name": "a slow rate is per minute",
+  "bar": {
+   "id": 1,
+   "desc": "Load",
+   "n": 40,
+   "total": 100,
+   "unit": "it",
+   "status": "running",
+   "elapsed": 20.0,
+   "rate": 0.04,
+   "remaining": 30.0,
+   "since_progress": 0.4,
+   "message": "",
+   "leave": true,
+   "metrics": {},
+   "children": []
+  },
+  "stats": [
+   "40/100 · 00:20 · about 30 s left · 2.4 it/min"
+  ],
+  "stalled": [
+   false
+  ]
+ },
+ {
+  "name": "a fast rate has no decimals",
+  "bar": {
+   "id": 1,
+   "desc": "Load",
+   "n": 40,
+   "total": 100,
+   "unit": "it",
+   "status": "running",
+   "elapsed": 20.0,
+   "rate": 1234.5,
+   "remaining": 30.0,
+   "since_progress": 0.4,
+   "message": "",
+   "leave": true,
+   "metrics": {},
+   "children": []
+  },
+  "stats": [
+   "40/100 · 00:20 · about 30 s left · 1234 it/s"
+  ],
+  "stalled": [
+   false
+  ]
+ },
+ {
+  "name": "over an hour",
+  "bar": {
+   "id": 1,
+   "desc": "Load",
+   "n": 40,
+   "total": 100,
+   "unit": "it",
+   "status": "running",
+   "elapsed": 3725.0,
+   "rate": 2.0,
+   "remaining": 30.0,
+   "since_progress": 0.4,
+   "message": "",
+   "leave": true,
+   "metrics": {},
+   "children": []
+  },
+  "stats": [
+   "40/100 · 1:02:05 · about 30 s left · 2 it/s"
+  ],
+  "stalled": [
+   false
+  ]
+ },
+ {
+  "name": "without a total",
+  "bar": {
+   "id": 1,
+   "desc": "Load",
+   "n": 1500,
+   "total": null,
+   "unit": "rows",
+   "status": "running",
+   "elapsed": 3.0,
+   "rate": 500.0,
+   "remaining": null,
+   "since_progress": 0.0,
+   "message": "",
+   "leave": true,
+   "metrics": {},
+   "children": []
+  },
+  "stats": [
+   "1500 rows · 00:03 · 500 rows/s"
+  ],
+  "stalled": [
+   false
+  ]
+ },
+ {
+  "name": "a count that is not whole",
+  "bar": {
+   "id": 1,
+   "desc": "Load",
+   "n": 2.5,
+   "total": 10.0,
+   "unit": "it",
+   "status": "running",
+   "elapsed": 5.0,
+   "rate": null,
+   "remaining": null,
+   "since_progress": 0.0,
+   "message": "",
+   "leave": true,
+   "metrics": {},
+   "children": []
+  },
+  "stats": [
+   "2.5/10 · 00:05"
+  ],
+  "stalled": [
+   false
+  ]
+ },
+ {
+  "name": "a large count that is not whole",
+  "bar": {
+   "id": 1,
+   "desc": "Load",
+   "n": 1234.5,
+   "total": 5000.5,
+   "unit": "it",
+   "status": "running",
+   "elapsed": 5.0,
+   "rate": null,
+   "remaining": null,
+   "since_progress": 0.0,
+   "message": "",
+   "leave": true,
+   "metrics": {},
+   "children": []
+  },
+  "stats": [
+   "1234/5000 · 00:05"
+  ],
+  "stalled": [
+   false
+  ]
+ },
+ {
+  "name": "metrics",
+  "bar": {
+   "id": 1,
+   "desc": "Load",
+   "n": 40,
+   "total": 100,
+   "unit": "it",
+   "status": "running",
+   "elapsed": 20.0,
+   "rate": 2.0,
+   "remaining": 30.0,
+   "since_progress": 0.4,
+   "message": "",
+   "leave": true,
+   "metrics": {
+    "loss": "0.42",
+    "lr": "0.001"
+   },
+   "children": []
+  },
+  "stats": [
+   "40/100 · 00:20 · about 30 s left · 2 it/s · loss=0.42 · lr=0.001"
+  ],
+  "stalled": [
+   false
+  ]
+ },
+ {
+  "name": "done",
+  "bar": {
+   "id": 1,
+   "desc": "Load",
+   "n": 100,
+   "total": 100,
+   "unit": "it",
+   "status": "done",
+   "elapsed": 50.0,
+   "rate": null,
+   "remaining": null,
+   "since_progress": 0.0,
+   "message": "",
+   "leave": true,
+   "metrics": {},
+   "children": []
+  },
+  "stats": [
+   "100/100 · done in 00:50 · 2 it/s"
+  ],
+  "stalled": [
+   false
+  ]
+ },
+ {
+  "name": "done at once",
+  "bar": {
+   "id": 1,
+   "desc": "Load",
+   "n": 100,
+   "total": 100,
+   "unit": "it",
+   "status": "done",
+   "elapsed": 0.0,
+   "rate": null,
+   "remaining": null,
+   "since_progress": 0.0,
+   "message": "",
+   "leave": true,
+   "metrics": {},
+   "children": []
+  },
+  "stats": [
+   "100/100 · done in 00:00"
+  ],
+  "stalled": [
+   false
+  ]
+ },
+ {
+  "name": "failed with a reason",
+  "bar": {
+   "id": 1,
+   "desc": "Load",
+   "n": 4,
+   "total": 10,
+   "unit": "it",
+   "status": "failed",
+   "elapsed": 2.0,
+   "rate": null,
+   "remaining": null,
+   "since_progress": 0.0,
+   "message": "ValueError: bad row",
+   "leave": true,
+   "metrics": {},
+   "children": []
+  },
+  "stats": [
+   "4/10 · failed after 00:02: ValueError: bad row"
+  ],
+  "stalled": [
+   false
+  ]
+ },
+ {
+  "name": "stopped",
+  "bar": {
+   "id": 1,
+   "desc": "Load",
+   "n": 7,
+   "total": 10,
+   "unit": "it",
+   "status": "stopped",
+   "elapsed": 61.0,
+   "rate": null,
+   "remaining": null,
+   "since_progress": 0.0,
+   "message": "",
+   "leave": true,
+   "metrics": {},
+   "children": []
+  },
+  "stats": [
+   "7/10 · stopped after 01:01"
+  ],
+  "stalled": [
+   false
+  ]
+ },
+ {
+  "name": "stalled",
+  "bar": {
+   "id": 1,
+   "desc": "Load",
+   "n": 10,
+   "total": 100,
+   "unit": "it",
+   "status": "running",
+   "elapsed": 40.0,
+   "rate": 0.3,
+   "remaining": 200.0,
+   "since_progress": 25.0,
+   "message": "",
+   "leave": true,
+   "metrics": {},
+   "children": []
+  },
+  "stats": [
+   "10/100 · 00:40 · no progress for 25 s"
+  ],
+  "stalled": [
+   true
+  ]
+ },
+ {
+  "name": "not stalled when a unit is slow anyway",
+  "bar": {
+   "id": 1,
+   "desc": "Load",
+   "n": 2,
+   "total": 100,
+   "unit": "it",
+   "status": "running",
+   "elapsed": 70.0,
+   "rate": null,
+   "remaining": null,
+   "since_progress": 20.0,
+   "message": "",
+   "leave": true,
+   "metrics": {},
+   "children": []
+  },
+  "stats": [
+   "2/100 · 01:10"
+  ],
+  "stalled": [
+   false
+  ]
+ },
+ {
+  "name": "stalled before the first unit",
+  "bar": {
+   "id": 1,
+   "desc": "Load",
+   "n": 0,
+   "total": 100,
+   "unit": "it",
+   "status": "running",
+   "elapsed": 31.0,
+   "rate": null,
+   "remaining": null,
+   "since_progress": 31.0,
+   "message": "",
+   "leave": true,
+   "metrics": {},
+   "children": []
+  },
+  "stats": [
+   "0/100 · 00:31 · no progress for 30 s"
+  ],
+  "stalled": [
+   true
+  ]
+ },
+ {
+  "name": "not stalled while a child moves",
+  "bar": {
+   "id": 1,
+   "desc": "Load",
+   "n": 1,
+   "total": 4,
+   "unit": "it",
+   "status": "running",
+   "elapsed": 60.0,
+   "rate": null,
+   "remaining": null,
+   "since_progress": 40.0,
+   "message": "",
+   "leave": true,
+   "metrics": {},
+   "children": [
+    {
+     "id": 2,
+     "desc": "Batches",
+     "n": 3,
+     "total": 8,
+     "unit": "it",
+     "status": "running",
+     "elapsed": 6.0,
+     "rate": null,
+     "remaining": null,
+     "since_progress": 1.0,
+     "message": "",
+     "leave": true,
+     "metrics": {},
+     "children": []
+    }
+   ]
+  },
+  "stats": [
+   "1/4 · 01:00",
+   "3/8 · 00:06"
+  ],
+  "stalled": [
+   false,
+   false
+  ]
+ },
+ {
+  "name": "stalled with its child",
+  "bar": {
+   "id": 1,
+   "desc": "Load",
+   "n": 1,
+   "total": 4,
+   "unit": "it",
+   "status": "running",
+   "elapsed": 60.0,
+   "rate": null,
+   "remaining": null,
+   "since_progress": 40.0,
+   "message": "",
+   "leave": true,
+   "metrics": {},
+   "children": [
+    {
+     "id": 2,
+     "desc": "Batches",
+     "n": 3,
+     "total": 8,
+     "unit": "it",
+     "status": "running",
+     "elapsed": 40.0,
+     "rate": null,
+     "remaining": null,
+     "since_progress": 35.0,
+     "message": "",
+     "leave": true,
+     "metrics": {},
+     "children": []
+    }
+   ]
+  },
+  "stats": [
+   "1/4 · 01:00",
+   "3/8 · 00:40 · no progress for 35 s"
+  ],
+  "stalled": [
+   false,
+   true
+  ]
+ },
+ {
+  "name": "a pending child is not drawn",
+  "bar": {
+   "id": 1,
+   "desc": "Load",
+   "n": 1,
+   "total": 4,
+   "unit": "it",
+   "status": "running",
+   "elapsed": 5.0,
+   "rate": null,
+   "remaining": null,
+   "since_progress": 0.0,
+   "message": "",
+   "leave": true,
+   "metrics": {},
+   "children": [
+    {
+     "id": 2,
+     "desc": "Batches",
+     "n": 3,
+     "total": 8,
+     "unit": "it",
+     "status": "pending",
+     "elapsed": 6.0,
+     "rate": null,
+     "remaining": null,
+     "since_progress": 1.0,
+     "message": "",
+     "leave": true,
+     "metrics": {},
+     "children": []
+    },
+    {
+     "id": 2,
+     "desc": "Batches",
+     "n": 3,
+     "total": 8,
+     "unit": "it",
+     "status": "running",
+     "elapsed": 6.0,
+     "rate": null,
+     "remaining": null,
+     "since_progress": 1.0,
+     "message": "",
+     "leave": true,
+     "metrics": {},
+     "children": []
+    }
+   ]
+  },
+  "stats": [
+   "1/4 · 00:05",
+   "3/8 · 00:06"
+  ],
+  "stalled": [
+   false,
+   false
+  ]
+ }
+]

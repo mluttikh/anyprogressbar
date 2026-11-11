@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import StrEnum
+from typing import Any
 
 
 class Status(StrEnum):
@@ -47,3 +48,22 @@ class Snapshot:
         if self.total <= 0:
             return 1.0
         return min(1.0, max(0.0, self.n / self.total))
+
+    def as_dict(self) -> dict[str, Any]:
+        """The tree as JSON-ready data: what the widget is sent (js/src/format.ts reads it)."""
+        return {
+            "id": self.id,
+            "desc": self.desc,
+            "n": self.n,
+            "total": self.total,
+            "unit": self.unit,
+            "status": self.status.value,
+            "elapsed": self.elapsed,
+            "rate": self.rate,
+            "remaining": self.remaining,
+            "since_progress": self.since_progress,
+            "message": self.message,
+            "leave": self.leave,
+            "metrics": dict(self.metrics),
+            "children": [child.as_dict() for child in self.children],
+        }

@@ -2,7 +2,7 @@
 
 - Status: **partly implemented**, 11 November 2026. The model, the renderer protocol,
   `NullRenderer`, `LogRenderer` (`render.py`) and `TerminalRenderer` (`terminal.py`) exist,
-  with detection of a terminal; the notebook's HTML and the widget do not.
+  with detection of a terminal; the notebook HTML (0003) and the widget (0004) followed.
 - Background: [the research report](../research/progress-bar-research.html), sections
   "Patterns the good ones share" and "Implications".
 
