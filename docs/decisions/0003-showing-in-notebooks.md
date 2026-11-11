@@ -1,7 +1,8 @@
 # 0003: Showing in notebooks: what the host spike found
 
-- Status: **findings, not yet implemented**, 11 November 2026. The spike's code is in
-  `_scratch/spike/` (not in the repository).
+- Status: **partly implemented**, 11 November 2026: the plain HTML renderer (`notebook.py`,
+  `tests/test_notebook.py`, and `tests/test_hosts.py`, which runs a real kernel and marimo).
+  The widget is not. The spike's code is in `_scratch/spike/` (not in the repository).
 - Tested: JupyterLab 4.6 (ipywidgets 8.1, anywidget 0.11) and marimo 0.25, in Chrome.
   **Not tested: VS Code notebooks and Colab.**
 
@@ -31,7 +32,15 @@
 - The widget is displayed through a display handle, with the static picture in the same
   output, rewritten at the end.
 - The plain-HTML renderer and the static picture share their markup.
-- No marimo-specific renderer.
+- No marimo-specific renderer; but a marimo-specific way to show HTML. marimo need not have
+  IPython installed (the spike's environment happened to), so there the HTML goes through
+  `mo.output.replace`. That replaces a cell's whole output, so the trees of one run are shown
+  together: those since the last moment none was live.
+- The HTML has inline styles only, no script and no style element, so it survives hosts that
+  strip those. Colours are mid-tones that read on light and dark pages.
+- The HTML renderer does not draw from a thread: output sent from another thread can land in
+  the wrong cell. So its clock stands still during one slow item; the widget's will not.
+- A bar is stalled only when nothing running under it has moved either.
 
 ## To do before relying on it
 

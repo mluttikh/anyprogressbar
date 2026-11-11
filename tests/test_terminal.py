@@ -166,6 +166,22 @@ def test_slow_work_is_not_called_stalled(clock):
         bar.set(10)
 
 
+def test_a_bar_whose_child_moves_is_not_stalled(clock):
+    screen = Screen()
+    with progress(total=3, desc="Epochs", renderer=terminal(screen), clock=clock) as outer:
+        outer.update()
+        with progress(total=500, desc="Batches") as inner:
+            for _ in range(100):
+                clock.tick(0.5)
+                inner.update()
+            assert "no progress" not in "".join(screen.display())
+            clock.tick(60)
+            inner.refresh()
+            assert all("no progress for 1 min" in row for row in screen.display())
+            inner.set(500)
+        outer.set(3)
+
+
 def test_write_prints_above_the_bars(clock):
     screen = Screen()
     set_renderer(terminal(screen))

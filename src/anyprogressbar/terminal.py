@@ -88,13 +88,21 @@ def stalled(bar: Snapshot) -> bool:
     average until then (thirty seconds when no unit is done yet)."""
     if bar.status is not Status.RUNNING:
         return False
+    quiet = _quiet(bar)  # a bar whose child moves is not stalled
     if bar.n <= 0:
-        return bar.since_progress >= 30
+        return quiet >= 30
     per_unit = (bar.elapsed - bar.since_progress) / bar.n
-    return bar.since_progress >= max(10.0, 5 * per_unit)
+    return quiet >= max(10.0, 5 * per_unit)
 
 
-def _stats(bar: Snapshot) -> str:
+def _quiet(bar: Snapshot) -> float:
+    """Seconds since the bar, or anything running under it, last moved."""
+    running = [c for c in bar.children if c.status is Status.RUNNING]
+    return min([bar.since_progress, *(_quiet(c) for c in running)])
+
+
+def stats(bar: Snapshot) -> str:
+    """The numbers beside a bar: where it is, how long it took or will take, how it ended."""
     total = bar.total
     position = (
         f"{fmt.count(bar.n)}/{fmt.count(total)}"
@@ -112,7 +120,7 @@ def _stats(bar: Snapshot) -> str:
     else:
         parts = [position, took]
         if stalled(bar):  # then the rate and the time remaining say nothing true
-            parts.append(f"no progress for {fmt.remaining(bar.since_progress)}")
+            parts.append(f"no progress for {fmt.remaining(_quiet(bar))}")
         else:
             if bar.remaining is not None:
                 parts.append(f"about {fmt.remaining(bar.remaining)} left")
@@ -127,9 +135,9 @@ def line(
 ) -> list[Segment]:
     """One bar as segments that fit in `columns`: name, percentage, bar, numbers."""
     color = _COLOR[bar.status]
-    stats = _stats(bar)
+    numbers = stats(bar)
     if ascii:
-        stats = stats.replace(" · ", ", ")
+        numbers = numbers.replace(" · ", ", ")
     fraction = bar.fraction
     percent = f"{100 * fraction:3.0f}%" if fraction is not None else ""
     name = "  " * depth + (bar.desc or "Progress")
@@ -141,7 +149,7 @@ def line(
     segments: list[Segment] = [(name, "1")]
     if percent:
         segments += [(" ", ""), (percent, "")]
-    used = cells(name) + cells(percent) + cells(stats) + 2
+    used = cells(name) + cells(percent) + cells(numbers) + 2
     if bar.status in (Status.FAILED, Status.STOPPED) and used + width + 3 > columns:
         width = 0  # the reason it ended matters more than the bar
     if width >= 6:
@@ -152,7 +160,7 @@ def line(
         else:
             filled, empty = fill(1.0 if fraction is None else fraction, width, ascii=ascii)
             segments += [(" " + left, "2"), (filled, color), (empty + right, "2")]
-    segments += [(" ", ""), (stats, color if bar.status.finished else "2")]
+    segments += [(" ", ""), (numbers, color if bar.status.finished else "2")]
     return _fit(segments, columns)
 
 

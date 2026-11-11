@@ -20,8 +20,12 @@ All notable changes to anyprogressbar. The format follows
   during a stall, `#` and `-` where the stream has no block characters, and the last state
   left in the scrollback. A thread keeps the clock ticking through a slow item. Work done
   within half a second is not drawn.
+- The notebook renderer without the widget: the bar as plain HTML, replaced in place in a
+  Jupyter kernel (through a display handle) and in marimo. What the notebook stores is HTML
+  and text, so a saved or exported notebook shows how the work ended. Each bar is a named
+  `progressbar` for screen readers, and a failure is said in words as well as in colour.
 - `write(...)` prints above live bars.
-- The renderer is chosen by where the code runs (a terminal, or anything else), by
-  `set_renderer`, or by `ANYPROGRESSBAR=terminal|log|off`. `CI`, `TERM=dumb` and `NO_COLOR`
+- The renderer is chosen by where the code runs (a notebook, a terminal, or anything else),
+  by `set_renderer`, or by `ANYPROGRESSBAR=notebook|terminal|log|off`. `CI`, `TERM=dumb` and `NO_COLOR`
   are respected.
 - Progress in the tab or taskbar (OSC 9;4) in Windows Terminal, ConEmu and Ghostty.

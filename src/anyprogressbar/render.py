@@ -124,7 +124,7 @@ def final_line(root: Snapshot) -> str:
 
 
 ENV = "ANYPROGRESSBAR"
-NAMES = ("terminal", "log", "off")
+NAMES = ("notebook", "terminal", "log", "off")
 _default: Renderer | None = None
 _shared: dict[str, Renderer] = {}
 
@@ -136,6 +136,10 @@ def _make(name: str) -> Renderer:
             from anyprogressbar.terminal import TerminalRenderer
 
             _shared[name] = TerminalRenderer()
+        elif name == "notebook":
+            from anyprogressbar.notebook import NotebookRenderer
+
+            _shared[name] = NotebookRenderer()
         else:
             _shared[name] = LogRenderer() if name == "log" else NullRenderer()
     return _shared[name]
@@ -153,8 +157,13 @@ def set_renderer(renderer: Renderer | str | None) -> None:
 
 
 def detect() -> str:
-    """The renderer that suits where the code runs: "terminal" on a terminal that can redraw
-    a line, "log" everywhere else (a pipe, a file, a CI job, a notebook kernel for now)."""
+    """The renderer that suits where the code runs: "notebook" in a Jupyter kernel or a marimo
+    notebook, "terminal" on a terminal that can redraw a line, "log" everywhere else (a pipe,
+    a file, a CI job)."""
+    from anyprogressbar.notebook import host
+
+    if host() is not None:
+        return "notebook"
     stream = sys.stderr
     try:
         interactive = stream.isatty()

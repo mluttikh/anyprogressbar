@@ -4,8 +4,8 @@ Progress bars for Jupyter and marimo notebooks (an [anywidget](https://anywidget
 terminals, from one model. The loop reports progress; what shows it is chosen by where the
 code runs.
 
-Status: pre-alpha. The model, the terminal bar and log lines exist; the notebook bar and the
-widget do not yet (a notebook gets log lines for now).
+Status: pre-alpha. The model, the terminal bar, log lines and a plain HTML bar for notebooks
+exist; the widget does not yet, so the `widget` extra adds nothing so far.
 
 ```bash
 pip install "anyprogressbar[widget]"   # with the notebook widget (recommended)
@@ -28,9 +28,10 @@ for epoch in progress(range(3), "Epochs"):       # a bar inside a bar is its chi
 ```
 
 A bar ends as `done`, `failed` or `stopped`, and gives no time remaining until the estimate
-is worth showing. On a terminal it is redrawn in place; in a pipe, a file or a CI job it
-becomes a line every few seconds. `ANYPROGRESSBAR=off` silences every bar, `log` and `terminal`
-force one or the other, and `write(...)` prints above live bars.
+is worth showing. In a Jupyter or marimo notebook it is HTML that is replaced in place and
+stays in the saved notebook; on a terminal it is redrawn in place; in a pipe, a file or a CI
+job it becomes a line every few seconds. `ANYPROGRESSBAR=off` silences every bar, `log`, `terminal` and
+`notebook` force one, and `write(...)` prints above live bars.
 
 The research behind the design is in
 [docs/research/progress-bar-research.html](docs/research/progress-bar-research.html), and the
