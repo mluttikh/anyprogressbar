@@ -48,6 +48,9 @@ dev = [
     "anywidget>=0.9.13",
     # notebooks are committed without outputs (`nbstripout --install`, once per clone)
     "nbstripout>=0.9.1",
+    "zensical>=0.0.66",
+    "mkdocstrings[python]>=1.0.6",
+    "markdown-exec>=1.12.3",
 ]
 
 [build-system]
@@ -105,6 +108,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
+"scripts/*" = ["T20"]  # tools that report on the command line
 # notebooks read as a user would write them: no annotations, loop variables with real names
 "examples/*" = ["ANN", "T20", "B007"]
 "tests/*" = [
@@ -114,7 +118,7 @@ ignore = [
 ]
 
 [tool.ty.src]
-include = ["src", "tests"]
+include = ["src", "tests", "scripts"]
 
 [tool.ty.environment]
 python-version = "3.12"

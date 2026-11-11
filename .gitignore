@@ -20,3 +20,6 @@ _scratch/
 
 # user documentation: the built site
 site/
+
+# the widget bundle, copied into the documentation by scripts/build_docs.py
+docs/user/assets/anyprogressbar/

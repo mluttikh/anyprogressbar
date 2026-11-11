@@ -92,18 +92,27 @@ def _in_flight() -> BaseException | None:
 class Bar[T]:
     """Progress through some work. `progress` is this class.
 
-    iterable: what to wrap; its length is the total when it has one.
-    desc: what the work is, shown beside the bar.
-    total: how many units make it complete; None when that is unknown.
-    unit: what is counted ("it", "files", "rows").
-    parent: the bar this one is part of; by default the current bar, if any.
-    weight: how many of its parent's units this bar covers. While it runs, its parent's time
-        remaining counts the part of them that is done.
-    leave: keep the bar once it is done. By default a root stays and a child goes
-        (a child that failed or stopped always stays).
-    renderer: what shows the tree (a root's only); by default the environment's.
-    disable: do nothing at all; iterating then costs nothing.
-    min_interval: the least time, in seconds, between two pictures handed to the renderer.
+    Wrap an iterable (`for x in progress(items)`), use it as a `with` block and call
+    `update`, or call `update` and `close` yourself. A bar made while another one runs
+    (inside its loop or its `with` block) becomes that bar's child.
+
+    Args:
+        iterable: What to wrap. Its length is the total when it has one.
+        desc: What the work is, shown beside the bar.
+        total: How many units make the work complete; None when that is unknown.
+        unit: What is counted: "it", "files", "rows", "MB".
+        parent: The bar this one is part of. By default the bar that is running where this
+            one is made, if any.
+        weight: How many of its parent's units this bar covers. While it runs, its parent's
+            time remaining counts the part of them that is done.
+        leave: Keep the bar once it is done. By default a bar of its own stays and a child
+            goes; a child that failed or stopped always stays.
+        renderer: What shows the bars (used by a bar of its own, not by a child). By default
+            the one `set_renderer` set, or the one that suits where the code runs.
+        disable: Do nothing at all. Iterating then costs nothing.
+        min_interval: The least time, in seconds, between two pictures handed to the
+            renderer.
+        clock: Where the time comes from, in seconds (for tests).
     """
 
     def __init__(
@@ -243,8 +252,13 @@ class Bar[T]:
         return self
 
     def close(self, status: Status | None = None, message: str = "") -> None:
-        """End the bar. Without a status: done when the total was reached (or there is none),
-        stopped otherwise. Bars still running under it end with it."""
+        """End the bar. Bars still running under it end with it.
+
+        Args:
+            status: How it ended. By default done when the total was reached (or there is
+                none), stopped otherwise.
+            message: Why it failed or stopped, shown beside it.
+        """
         if self.disable or self.status.finished:
             return
         if _current.get() is self:
@@ -273,7 +287,11 @@ class Bar[T]:
             self._emit(now, force=True)
 
     def fail(self, message: str = "") -> None:
-        """End the bar as failed."""
+        """End the bar as failed.
+
+        Args:
+            message: Why, shown beside the bar.
+        """
         self.close(Status.FAILED, message)
 
     def __del__(self) -> None:
@@ -312,8 +330,13 @@ class Bar[T]:
             bar = bar.parent
 
     def update(self, n: float = 1, *, skip: bool = False) -> None:
-        """`n` more units are done. `skip=True` for units that took no real work (cached,
-        already done in an earlier run): they count as done, not towards the rate."""
+        """Count units as done.
+
+        Args:
+            n: How many more units are done.
+            skip: The units took no real work (cached, or done in an earlier run): they
+                count as done, but not towards the rate and the time remaining.
+        """
         if self.disable:
             return
         if self.status is Status.PENDING:
@@ -328,8 +351,13 @@ class Bar[T]:
             self._emit(now)
 
     def set(self, n: float | None = None, *, total: float | None = None) -> None:
-        """Set the position (for work that reports where it is, not how far it moved), the
-        total (once it is known, or when it grows), or both."""
+        """Set where the work is, or how much there is.
+
+        Args:
+            n: The position, for work that reports where it is rather than how far it
+                moved.
+            total: The total, once it is known or when it changes.
+        """
         if self.disable:
             return
         if total is not None:
@@ -352,7 +380,8 @@ class Bar[T]:
         self._changed()
 
     def set_postfix(self, **metrics: Any) -> None:
-        """Values to show beside the bar (`loss=0.42, acc=0.91`); they replace the last ones."""
+        """Show values beside the bar (`loss=0.42, acc=0.91`). They replace the last ones;
+        floats are shown with three significant digits."""
         if self.disable:
             return
         self.metrics = {key: fmt.metric(value) for key, value in metrics.items()}

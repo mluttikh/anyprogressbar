@@ -41,6 +41,9 @@ The widget needs anywidget in the environment that Jupyter itself runs in, not o
 kernel's: with uv, `uv run --with jupyterlab --with anywidget jupyter lab`. Where the page
 shows no widgets the bar is the plain HTML one, and says so once.
 
+The documentation (tutorials, how-to guides, reference, explanation) is in
+[docs/user](docs/user), built into a site with `uv run python scripts/build_docs.py`.
+
 Notebooks to run are in [`examples/`](examples/):
 [getting started](examples/getting_started.ipynb), [bars inside bars](examples/nested_bars.ipynb),
 [how a bar ends, and stalls](examples/endings_and_stalls.ipynb) and
@@ -56,5 +59,7 @@ decisions in [docs/decisions](docs/decisions).
 (cd js && npm install && npm run build)   # the widget's bundle; npm test for its tests
 uv sync
 uv run nbstripout --install               # once per clone: commit notebooks without outputs
+uv run python scripts/build_docs.py       # the documentation into site/ (examples run; warnings fail)
+uv run python scripts/build_docs.py serve # the same, previewed at http://localhost:8000
 uv run ruff check . && uv run ruff format --check . && uv run ty check && uv run pytest
 ```

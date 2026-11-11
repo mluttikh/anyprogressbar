@@ -18,12 +18,31 @@ class Status(StrEnum):
 
     @property
     def finished(self) -> bool:
+        """Done, failed or stopped."""
         return self in (Status.DONE, Status.FAILED, Status.STOPPED)
 
 
 @dataclass(frozen=True, slots=True)
 class Snapshot:
-    """A bar and its children at one moment. Immutable, and plain data throughout."""
+    """A bar and its children at one moment: what a renderer is given. Immutable, and plain
+    data throughout.
+
+    Attributes:
+        id: The bar's number, the same in every snapshot of it.
+        desc: What the work is.
+        n: How many units are done.
+        total: How many units make the work complete; None when unknown.
+        unit: What is counted.
+        status: Where the bar is in its life.
+        elapsed: Seconds since the bar started (to its end, once it has ended).
+        rate: Units per second; None until the estimate is stable.
+        remaining: Seconds left; None without a total or a rate.
+        since_progress: Seconds since `n` last changed.
+        message: Why the bar failed or stopped.
+        leave: Keep the bar on screen once it is done.
+        metrics: The values set with `Bar.set_postfix`, as text.
+        children: The bars inside this one, in the order they were made.
+    """
 
     id: int
     desc: str
@@ -31,12 +50,12 @@ class Snapshot:
     total: float | None
     unit: str
     status: Status
-    elapsed: float  # seconds since the bar started (to its end, once finished)
-    rate: float | None  # units per second; None until the estimate is stable
-    remaining: float | None  # seconds; None without a total or a rate
-    since_progress: float  # seconds since n last changed
-    message: str = ""  # why it failed or stopped
-    leave: bool = True  # keep the bar on screen once it is done
+    elapsed: float
+    rate: float | None
+    remaining: float | None
+    since_progress: float
+    message: str = ""
+    leave: bool = True
     metrics: dict[str, str] = field(default_factory=dict)
     children: tuple[Snapshot, ...] = ()
 

@@ -167,13 +167,16 @@ class MarimoDisplay:
 
 
 class NotebookRenderer:
-    """Shows bars as HTML in a notebook.
+    """Shows bars as plain HTML in a notebook, replaced in place. No widget, no script: what
+    the notebook stores reads anywhere.
 
-    display: where the pictures go; by default the host's (`host()`).
-    interval: the least time, in seconds, between two pictures of one tree.
-    delay: a tree is first shown when it has run this long; done sooner, never.
-    note: a line under a running bar (how to get the widget), shown for the first tree only
-        and gone from its last picture.
+    Args:
+        display: Where the pictures go. By default the notebook's (Jupyter or marimo).
+        interval: The least time, in seconds, between two pictures of one bar.
+        delay: Bars are first shown when they have run this long; work done sooner is never
+            shown.
+        note: A line under the first running bar (how to get the widget), gone from its
+            last picture.
     """
 
     def __init__(

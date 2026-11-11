@@ -196,14 +196,17 @@ class MarimoWidgetDisplay:
 
 
 class WidgetRenderer:
-    """Shows bars as a widget in a notebook.
-
-    display: where the widget goes; by default the host's (`notebook.host()`).
-    interval: the least time, in seconds, between two pictures sent to the page.
-    delay: a tree is first shown when it has run this long; done sooner, never.
+    """Shows bars as a widget in a notebook, whose clock ticks in the browser. When the work
+    ends, the output becomes the plain HTML that `NotebookRenderer` makes.
 
     Where it is not known that the page shows widgets, bars may be plain HTML instead (see
     the top of this module). If the widget cannot be made at all, they are HTML from then on.
+
+    Args:
+        display: Where the widget goes. By default the notebook's (Jupyter or marimo).
+        interval: The least time, in seconds, between two pictures sent to the page.
+        delay: Bars are first shown when they have run this long; work done sooner is never
+            shown.
     """
 
     def __init__(

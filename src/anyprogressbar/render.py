@@ -26,6 +26,10 @@ class Stream(Protocol):
 
 
 class Renderer(Protocol):
+    """What shows bars: any object with these two methods. A renderer with an `attach(root_id,
+    source)` method is also given a way to ask a root for a fresh snapshot, for drawing from
+    a timer."""
+
     def update(self, root: Snapshot) -> None:
         """The tree changed (or a bar in it started or ended)."""
 
@@ -48,6 +52,11 @@ class LogRenderer:
 
     A line every `interval` seconds while the work runs, and one when it ends. Work that is
     done within `delay` seconds prints nothing; work that fails or stops always says so.
+
+    Args:
+        file: Where the lines go; standard error by default.
+        interval: Seconds between two lines about running work.
+        delay: Work is first reported when it has run this long.
     """
 
     def __init__(
@@ -163,9 +172,13 @@ def _make(name: str) -> Renderer:
 
 
 def set_renderer(renderer: Renderer | str | None) -> None:
-    """The renderer for bars that are given none: an object, a name ("notebook", "widget",
-    "html", "terminal", "log", "off"), or None to choose by the environment again.
-    "notebook" is the widget where anywidget is installed, and plain HTML where it is not."""
+    """Set the renderer for bars that are given none.
+
+    Args:
+        renderer: A renderer; a name ("notebook", "widget", "html", "terminal", "log",
+            "off"); or None to choose by where the code runs again. "notebook" is the
+            widget where anywidget is installed, and plain HTML where it is not.
+    """
     global _default  # noqa: PLW0603
     if isinstance(renderer, str):
         if renderer not in NAMES:
@@ -225,8 +238,16 @@ def default_renderer() -> Renderer:
 
 
 def write(*values: object, sep: str = " ", file: Stream | None = None) -> None:
-    """Print above live bars. Since `print` does that too on a terminal (`terminal.Redirect`),
-    this is for streams that are not redirected, such as a `file` of your own."""
+    """Print above live bars, as `print` does.
+
+    On a terminal `print` itself goes above live bars, so this is for streams that are not
+    redirected, such as a file of your own.
+
+    Args:
+        *values: What to print.
+        sep: What goes between the values.
+        file: Where to print; standard output by default.
+    """
     text = sep.join(str(v) for v in values)
     renderer = default_renderer()
     above = getattr(renderer, "write", None)

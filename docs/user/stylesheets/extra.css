@@ -1,0 +1,35 @@
+/* bars in the pages: room around them */
+.apb-picture,
+.apb-replay {
+  margin: 0.8em 0 1.4em;
+}
+.apb-replay {
+  min-height: 2.2em;
+}
+
+/* the theme styles every button in a page */
+.md-typeset .apb-again {
+  margin-top: 0.4em;
+  padding: 0.1em 0.7em;
+  font-size: 0.7rem;
+  border: 1px solid var(--md-default-fg-color--lighter);
+  border-radius: 4px;
+  color: var(--md-default-fg-color--light);
+  background: none;
+  cursor: pointer;
+}
+.md-typeset .apb-again:hover {
+  color: var(--md-accent-fg-color);
+  border-color: var(--md-accent-fg-color);
+}
+
+/* what a terminal shows: the 16 colours as a terminal's theme might draw them */
+.md-typeset pre.apb-terminal > code {
+  line-height: 1.45;
+  white-space: pre;
+}
+.apb-t-running { color: #1c9cb8; }
+.apb-t-done { color: #2f9e44; }
+.apb-t-failed { color: #e03131; }
+.apb-t-stopped { color: #d4880b; }
+.apb-t-pending { opacity: 0.6; }

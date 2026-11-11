@@ -39,6 +39,8 @@ All notable changes to anyprogressbar. The format follows
   prompt for `input()` has the screen until it is answered. `write(...)` does the same for
   a stream of your own.
 - Example notebooks in `examples/`, run by the tests.
+- User documentation (Zensical): tutorials, how-to guides, reference and explanation. The
+  examples in it run while it is built, and the bars shown are what they drew.
 - The renderer is chosen by where the code runs (a notebook, a terminal, or anything else),
   by `set_renderer`, or by `ANYPROGRESSBAR=notebook|widget|html|terminal|log|off`. `CI`, `TERM=dumb` and `NO_COLOR`
   are respected.

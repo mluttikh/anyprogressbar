@@ -295,16 +295,18 @@ def _stream_handlers() -> list[logging.StreamHandler]:
 class TerminalRenderer:
     """Draws bars in place on a terminal.
 
-    file: the stream; standard error by default (looked up at each write).
-    interval: seconds between redraws by the thread.
-    delay: a tree is first drawn when it has run this long; done sooner, never.
-    ascii: `#` and `-` instead of block characters; by default when the stream's encoding
-        has no block characters.
-    color: by default unless `NO_COLOR` is set.
-    threaded: False draws only when a bar hands over a picture (for tests).
-    columns: the width to draw in; by default the terminal's, asked at each draw.
-    redirect: while bars are live, send what is printed or logged to the terminal above
-        them (`Redirect`).
+    Args:
+        file: The stream; standard error by default (looked up at each write).
+        interval: Seconds between two redraws by the thread that keeps the clock ticking.
+        delay: Bars are first drawn when they have run this long; work done sooner is never
+            drawn.
+        ascii: `#` and `-` instead of block characters. By default where the stream's
+            encoding has no block characters.
+        color: Colour by status. By default unless `NO_COLOR` is set.
+        threaded: False draws only when a bar hands over a picture (for tests).
+        columns: The width to draw in. By default the terminal's, asked at each draw.
+        redirect: While bars are live, send what is printed or logged to the terminal above
+            them.
     """
 
     def __init__(
