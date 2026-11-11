@@ -11,6 +11,10 @@ All notable changes to anyprogressbar. The format follows
 - The model: `progress(...)` (a `Bar`) wraps an iterable, works as a context manager, or is
   updated by hand; bars started inside another bar become its children; a bar ends as
   `done`, `failed` or `stopped`.
+- A loop whose body raises ends its bar as `failed`, with the exception as the reason, also
+  when the bar is wrapped around the loop and not a `with` block.
+- A parent bar's time remaining counts how far its running children are (`weight=` says how
+  many of the parent's units a child covers).
 - A rate and time-remaining estimate that is absent until it is stable, and falls while
   nothing happens.
 - Log lines for pipes, files and CI: a line every few seconds and one at the end, nothing

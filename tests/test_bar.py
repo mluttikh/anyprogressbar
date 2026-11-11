@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import contextlib
 import gc
+import sys
 import threading
 
 import pytest
@@ -277,3 +279,91 @@ def test_a_renderer_that_breaks_does_not_break_the_work(clock):
 def test_a_bar_without_an_iterable_cannot_be_iterated():
     with pytest.raises(TypeError, match="wraps no iterable"):
         iter(progress(total=3))
+
+
+def test_a_parents_time_remaining_counts_what_its_running_child_has_done(clock, recorder):
+    seen = {}
+    for epoch in progress(range(4), "Epochs", renderer=recorder, clock=clock):
+        for i in (inner := progress(range(10), "Batches")):
+            clock.tick(1.0)
+            if (epoch, i) == (0, 5):
+                inner.refresh()
+                seen["first"] = recorder.updates[-1]
+            if (epoch, i) == (2, 4):
+                inner.refresh()
+                seen["third"] = recorder.updates[-1]
+    first, third = seen["first"], seen["third"]
+    # half an epoch in, with no epoch done: 5 of 40 seconds gone
+    assert (first.n, first.fraction) == (0, 0.0)
+    assert first.remaining == pytest.approx(35, abs=1.5)
+    assert first.rate == pytest.approx(0.1, rel=0.05)
+    # no jump when a child ends and the parent then counts its unit
+    assert third.remaining == pytest.approx(16, abs=1.5)
+    assert recorder.closed[-1].status is Status.DONE
+
+
+def test_a_child_can_cover_more_or_less_than_one_of_its_parents_units(clock, recorder):
+    with progress(total=100, desc="MB", renderer=recorder, clock=clock) as outer:
+        with progress(total=10, desc="file", weight=50) as inner:
+            for _ in range(5):
+                clock.tick(1.0)
+                inner.update()
+            snap = outer.snapshot()
+        outer.update(50)
+    assert snap.n == 0
+    assert snap.remaining == pytest.approx(15, abs=1)  # 25 of 100 in 5 s
+
+
+def test_a_loop_whose_body_raises_ends_as_failed_at_once(clock, recorder):
+    with pytest.raises(ValueError, match="bad row"):
+        for _ in progress(range(10), "Outer", renderer=recorder, clock=clock):
+            for i in progress(range(5), "Inner"):
+                clock.tick(1.0)
+                if i == 2:
+                    raise ValueError("bad row")
+    (closed,) = recorder.closed
+    assert (closed.status, closed.message) == (Status.FAILED, "ValueError: bad row")
+    (inner,) = closed.children
+    assert (inner.status, inner.n, inner.message) == (Status.FAILED, 2, "ValueError: bad row")
+
+
+def test_a_loop_that_is_left_is_stopped_whatever_was_caught_on_the_way(clock, recorder):
+    def fails():
+        raise KeyError("x")
+
+    for i in progress(range(10), "Caught in the body", renderer=recorder, clock=clock):
+        with contextlib.suppress(KeyError):
+            fails()
+        if i == 3:
+            break
+    for _ in progress(range(10), "Left from a handler", renderer=recorder, clock=clock):
+        try:
+            fails()
+        except KeyError:
+            break
+    with contextlib.suppress(KeyError):
+        fails()
+    for _ in progress(range(10), "After an old failure", renderer=recorder, clock=clock):
+        break
+    assert [(c.status, c.message) for c in recorder.closed] == [(Status.STOPPED, "")] * 3
+
+
+def test_an_interrupted_loop_ends_as_stopped(clock, recorder):
+    with pytest.raises(KeyboardInterrupt):
+        for _ in progress(range(10), "Loop", renderer=recorder, clock=clock):
+            raise KeyboardInterrupt
+    (closed,) = recorder.closed
+    assert (closed.status, closed.message) == (Status.STOPPED, "interrupted")
+
+
+def test_exceptions_are_only_listened_for_while_a_loop_runs(clock, recorder):
+    from anyprogressbar import bar as bar_module
+
+    assert bar_module._watchers == 0
+    for _ in progress(range(3), renderer=recorder, clock=clock):
+        assert bar_module._watchers == 1
+        assert bar_module._tool is not None
+        assert sys.monitoring.get_events(bar_module._tool) != 0
+    assert bar_module._watchers == 0
+    assert bar_module._tool is not None
+    assert sys.monitoring.get_events(bar_module._tool) == 0

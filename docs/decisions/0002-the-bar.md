@@ -29,17 +29,27 @@
   the last gap, the rate decays, so a stall lengthens the time remaining.
   `update(n, skip=True)` counts units as done without counting them towards the rate.
 - **Time remaining is shown coarsely**: seconds, then 5 s steps, minutes, quarter hours.
+- **A loop whose body raises ends as `failed`, at once**, in the iterator form too. The
+  generator cannot see the body's exception: it is only closed, as after a `break`. So while
+  a bar runs around a loop, `sys.monitoring` (Python 3.12) is asked for the exceptions that
+  are raised and handled, per thread, and the generator looks at what is on its way up when
+  it is closed. Tried on 3.12 to 3.15 with `break`, `return`, exceptions caught in the body,
+  a `break` from a handler, exceptions from C, Ctrl-C and nested loops. It listens only
+  while such a bar runs, and then makes each raised exception about 0.2 µs dearer. Where no
+  tool id is free the bar ends as `stopped`, as before. (A first try, a hook after each
+  notebook cell, came too late: the bar had already ended.)
+- **A parent's time remaining counts the done part of its running children.** A child
+  covers `weight` units of its parent (one by default: the inner loop of a nested loop).
+  The estimator is only told of new ground, so nothing jumps when a child ends and its
+  parent then counts the unit. The bar itself and its count still show whole units only.
 
 ## Known limits
 
-- **A loop body that raises** cannot be seen by the iterator form: the bar ends as
-  `stopped`, and only when the generator is collected (at once in CPython when nothing else
-  holds the traceback; later in a notebook, which keeps the last traceback). The `with` form
-  reports `failed` at once. A notebook renderer can close this gap with a hook that runs
-  after each cell.
-- **A parent's estimate** uses only its own updates, so an outer bar of a few slow steps
-  has no time remaining for a long while. Weighted children (Foundation's pending units)
-  would fix that; the tree allows it.
+- **A loop bar that is closed while an unrelated exception is on its way up** in the same
+  thread (a generator kept in a variable and collected then) would be called failed.
+- **A child that covers less than a unit** (two bars in a row inside one step) makes its
+  parent's estimate too hopeful unless it is given a `weight`.
+
 - **A slow item after many fast ones** is noticed late by the loop itself, since `gate` only
   adapts when it is reached. `bar.n` is stored on every item, so a renderer that draws from
   a timer still shows the true count.

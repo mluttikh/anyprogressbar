@@ -15,9 +15,11 @@ child. The root of a tree owns the lock and the renderer, and hands the renderer
 
 from __future__ import annotations
 
+import contextlib
 import contextvars
 import itertools
 import operator
+import sys
 import threading
 import time
 import warnings
@@ -35,6 +37,57 @@ _current: contextvars.ContextVar[Bar[Any] | None] = contextvars.ContextVar(
 )
 _ids = itertools.count(1)
 
+# A bar around a `for` loop cannot see an exception in the loop's body: its generator is just
+# closed, as it is after a `break`. So while such a bar runs, the interpreter is asked
+# (`sys.monitoring`) to say which exception is on its way up in each thread, and the generator
+# looks at that when it is closed. (Decision 0002.)
+_flight = threading.local()  # .error: (watch number, the exception that is not yet handled)
+_watch_lock = threading.Lock()
+_watchers = 0
+_watch_number = 0  # which stretch of watching: what an earlier one saw says nothing now
+_tool: int | None = None
+
+
+def _raised(_code: object, _offset: int, error: BaseException) -> None:
+    if not isinstance(error, GeneratorExit):  # a generator being closed is not a failure
+        _flight.error = (_watch_number, error)
+
+
+def _handled(_code: object, _offset: int, error: BaseException) -> None:
+    pending = getattr(_flight, "error", None)
+    if pending is not None and pending[1] is error:
+        _flight.error = None
+
+
+def _watch(on: bool) -> None:
+    """Count the loops that are watched; listen for exceptions while there is one."""
+    global _watchers, _watch_number, _tool  # noqa: PLW0603
+    monitoring = sys.monitoring
+    events = monitoring.events
+    # where no tool id is free nothing is heard, and a loop that fails ends as stopped
+    with _watch_lock, contextlib.suppress(Exception):
+        _watchers += 1 if on else -1
+        if on and _watchers == 1:
+            if _tool is None:
+                tool = next(i for i in range(6) if monitoring.get_tool(i) is None)
+                monitoring.use_tool_id(tool, "anyprogressbar")
+                monitoring.register_callback(tool, events.RAISE, _raised)
+                monitoring.register_callback(tool, events.RERAISE, _raised)
+                monitoring.register_callback(tool, events.EXCEPTION_HANDLED, _handled)
+                _tool = tool
+            _watch_number += 1
+            monitoring.set_events(_tool, events.RAISE | events.RERAISE | events.EXCEPTION_HANDLED)
+        elif not on and _watchers == 0 and _tool is not None:
+            monitoring.set_events(_tool, 0)
+
+
+def _in_flight() -> BaseException | None:
+    """The exception that is on its way up in this thread, if any."""
+    pending = getattr(_flight, "error", None)
+    if pending is not None and pending[0] == _watch_number:
+        return pending[1]
+    return None
+
 
 class Bar[T]:
     """Progress through some work. `progress` is this class.
@@ -44,6 +97,8 @@ class Bar[T]:
     total: how many units make it complete; None when that is unknown.
     unit: what is counted ("it", "files", "rows").
     parent: the bar this one is part of; by default the current bar, if any.
+    weight: how many of its parent's units this bar covers. While it runs, its parent's time
+        remaining counts the part of them that is done.
     leave: keep the bar once it is done. By default a root stays and a child goes
         (a child that failed or stopped always stays).
     renderer: what shows the tree (a root's only); by default the environment's.
@@ -59,6 +114,7 @@ class Bar[T]:
         total: float | None = None,
         unit: str = "it",
         parent: Bar[Any] | None = None,
+        weight: float = 1.0,
         leave: bool | None = None,
         renderer: Renderer | None = None,
         disable: bool = False,
@@ -81,7 +137,9 @@ class Bar[T]:
         self.message = ""
         self.metrics: dict[str, str] = {}
         self.children: list[Bar[Any]] = []
+        self.weight = weight
         self._estimator = RateEstimator()
+        self._credited = 0.0  # the furthest `_reached()` the estimator was told of
         self._t_start = self._t_end = self._t_progress = 0.0
         self._previous: Bar[Any] | None = None
 
@@ -117,7 +175,7 @@ class Bar[T]:
         if self.status is Status.RUNNING:
             rate = self._estimator.rate(now)
             if rate is not None and self.total is not None:
-                remaining = max(0.0, self.total - self.n) / rate
+                remaining = max(0.0, self.total - self._reached()) / rate
         return Snapshot(
             id=self.id,
             desc=self.desc,
@@ -227,13 +285,31 @@ class Bar[T]:
 
     # -- progress --------------------------------------------------------------------------
 
+    def _reached(self) -> float:
+        """How far the bar is, counting the done part of the children that are running."""
+        reached = self.n
+        for child in self.children:
+            if child.status is Status.RUNNING and child.total:
+                part = min(1.0, max(0.0, child._reached() / child.total))
+                reached += child.weight * part
+        return reached
+
     def _record(self, dn: float, now: float, *, skip: bool = False) -> None:
-        if skip:
-            self._estimator.skip(now)
-        else:
-            self._estimator.update(dn, now)
+        """Tell the estimators, this bar's and those above it, how far the work is. They
+        only hear of ground that is new: a child that ends takes its part away, and its
+        parent's own update then puts it back."""
         if dn:
             self._t_progress = now
+        bar: Bar[Any] | None = self
+        while bar is not None and bar.status is Status.RUNNING:
+            reached = bar._reached()
+            gained = max(0.0, reached - bar._credited)
+            bar._credited = max(bar._credited, reached)
+            if skip:
+                bar._estimator.skip(now)
+            else:
+                bar._estimator.update(gained, now)
+            bar = bar.parent
 
     def update(self, n: float = 1, *, skip: bool = False) -> None:
         """`n` more units are done. `skip=True` for units that took no real work (cached,
@@ -324,6 +400,7 @@ class Bar[T]:
         `min_interval`'s worth of items."""
         self.start()
         self._make_current()
+        _watch(True)
         root = self._root
         clock, lock = root._clock, root._lock
         target = root._min_interval / 2
@@ -351,15 +428,26 @@ class Bar[T]:
                     check_at = n + gate
             exhausted = True
         finally:
-            # A loop body that raises does not reach here until the generator is collected:
-            # the generator cannot see the body's exception. Use a `with` block when a
-            # failure must show at once.
+            # After a `break`, or an exception in the loop's body, the generator is closed
+            # and arrives here; which of the two it was, the interpreter has told `_flight`.
+            error = None if exhausted else _in_flight()
+            _watch(False)
             if self.status is Status.RUNNING:
                 with lock:
                     self._record(n - recorded, clock())
-                self.close(Status.DONE if exhausted else Status.STOPPED)
+                if exhausted:
+                    self.close(Status.DONE)
+                elif error is None:
+                    self.close(Status.STOPPED)
+                elif isinstance(error, KeyboardInterrupt):
+                    self.close(Status.STOPPED, "interrupted")
+                else:
+                    reason = type(error).__name__ + (f": {error}" if str(error) else "")
+                    self.close(Status.FAILED, reason)
             elif _current.get() is self:
                 _current.set(self._previous)
+            if _watchers == 0:
+                _flight.error = None  # do not keep the exception, and its frames, alive
 
     def __repr__(self) -> str:
         total = "?" if self.total is None else fmt.count(self.total)

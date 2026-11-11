@@ -35,6 +35,12 @@ CELLS = [
         "    print(type(renderer).__name__, len(getattr(renderer, '_widgets', ())))\n"
         "print(len(getattr(renderer, '_widgets', ())))"
     ),
+    (
+        "for i in progress(range(10), 'Rows'):\n"
+        "    time.sleep(0.2)\n"
+        "    if i == 3:\n"
+        "        raise KeyError('id')"
+    ),
 ]
 
 
@@ -112,3 +118,9 @@ def test_in_a_kernel_with_anywidget_the_running_bar_is_a_widget_and_the_record_i
     (output,) = displays(cell)
     assert sorted(output.data) == ["text/html", "text/plain"]
     assert "1/3 · stopped after 00:00" in output.data["text/plain"]
+
+
+def test_in_a_kernel_a_loop_whose_body_raises_ends_as_failed(executed):
+    cell = executed.cells[5]
+    (output,) = displays(cell)
+    assert "3/10 · failed after 00:00: KeyError: 'id'" in output.data["text/plain"]

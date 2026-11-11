@@ -67,7 +67,9 @@ def test_endings_are_said_in_words(executed):
     assert "2/5 · failed after" in records[1]
     assert records[1].endswith(": the server said no")
     assert "stopped after" in records[2]
-    assert "6/6 · done in 00:1" in records[3]
+    assert "20/30 · failed after" in records[3]
+    assert "ValueError: invalid literal" in records[3]
+    assert "6/6 · done in 00:1" in records[4]
 
 
 def test_where_bars_show_writes_log_lines_and_milestones(executed):

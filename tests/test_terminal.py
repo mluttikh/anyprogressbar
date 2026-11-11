@@ -57,7 +57,11 @@ def test_children_are_lines_under_their_parent_and_go_when_done(clock):
             if (epoch, i) == (1, 1):
                 inner.refresh()
                 assert screen.display() == [
-                    "Epochs       50% ▕██████████          ▏ 1/2 · 00:06",
+                    # the parent's time remaining counts the quarter of its second unit
+                    (
+                        "Epochs       50% ▕██████████          ▏ 1/2 · 00:06"
+                        " · about 3 s left · 15 it/min"
+                    ),
                     "  Batches 1  25% ▕█████               ▏ 1/4 · 00:02",
                 ]
     assert screen.display() == [
