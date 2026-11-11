@@ -24,8 +24,23 @@
   to show how the work ended; and the kernel does not keep a widget for every bar that ever
   ran (ipywidgets holds every open widget).
 - **While it runs, the output holds the widget's view with the HTML and text beside it.**
-  A host that cannot show widgets shows the HTML. Seen by accident: a JupyterLab without
-  the widget manager showed the HTML bar, updated in place, with no error.
+  A page that cannot show widgets shows the HTML.
+- **That HTML must not stand still.** It did at first: in a JupyterLab started from an
+  environment without anywidget (`uv run --with jupyterlab jupyter lab`), the bar appeared
+  at its first value and jumped to 100% at the end, because the kernel fed a widget that
+  nobody saw. A kernel is not told how its output is drawn, so it goes by three things:
+  - Each widget says "shown" when the page draws it. That is certain, but the kernel reads
+    it only when the running cell, and every cell queued behind it, has ended (seen in
+    JupyterLab 4.6 with ipykernel 7.4). So it is no use for the first cell, or for Run All.
+  - Until then, the guess is whether the browser side of anywidget and of the widget
+    manager is installed where the kernel runs. Where it is, bars are widgets. Where it is
+    not, a tree is a widget for half a second, in case the page answers, and HTML replaced
+    in place after that; after three such trees, HTML from the start.
+  - If a widget was shown and the kernel has since been idle for a second with no answer,
+    the page shows no widgets: bars are HTML from then on, and the first says once why and
+    what to install. A late answer undoes this.
+  Seen in both JupyterLabs: widgets throughout where they can be shown, HTML that moves
+  where they cannot.
 - **At most ten pictures a second** go to the page (the bar's own `min_interval`), each a
   few hundred bytes for a bar. Not measured beyond that.
 - **Running bars have faint ribbing that moves backwards**, which makes a bar feel faster
@@ -41,6 +56,10 @@
   build makes it (hatch-jupyter-builder), as in anytrellis and anytimeline.
 
 ## Known limits
+
+- Where the kernel's environment has the widgets' browser side and Jupyter's does not, the
+  first cell's bars stand still (and all of them under Run All), until the kernel has been
+  idle once. `ANYPROGRESSBAR=html` avoids it.
 
 - A page opened while a bar runs counts the time from when it opened, not from when the
   picture was made.

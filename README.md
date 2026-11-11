@@ -37,6 +37,10 @@ redrawn in place; in a pipe, a file or a CI job it becomes a line every few seco
 `ANYPROGRESSBAR=off` silences every bar, `log`, `terminal`, `notebook`, `widget` and `html`
 force one, and `write(...)` prints above live bars.
 
+The widget needs anywidget in the environment that Jupyter itself runs in, not only in the
+kernel's: with uv, `uv run --with jupyterlab --with anywidget jupyter lab`. Where the page
+shows no widgets the bar is the plain HTML one, and says so once.
+
 Notebooks to run are in [`examples/`](examples/):
 [getting started](examples/getting_started.ipynb), [bars inside bars](examples/nested_bars.ipynb),
 [how a bar ends, and stalls](examples/endings_and_stalls.ipynb) and

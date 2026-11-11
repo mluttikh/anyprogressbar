@@ -32,7 +32,9 @@ All notable changes to anyprogressbar. The format follows
   clock ticks in the browser, so the elapsed time, the time remaining and a stall notice
   keep up during one slow item. When the work ends the output becomes the plain HTML and
   text, so the saved notebook needs no widget state. Used wherever anywidget is installed;
-  without it the HTML bar says once how to get it.
+  without it the HTML bar says once how to get it. Where the notebook page cannot show
+  widgets (Jupyter started from an environment without anywidget), the bar is the HTML one
+  and says so once.
 - `write(...)` prints above live bars.
 - Example notebooks in `examples/`, run by the tests.
 - The renderer is chosen by where the code runs (a notebook, a terminal, or anything else),

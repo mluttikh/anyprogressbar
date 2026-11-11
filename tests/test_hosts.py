@@ -114,7 +114,7 @@ def test_in_a_kernel_with_anywidget_the_running_bar_is_a_widget_and_the_record_i
         pytest.skip("the bundle is not built: npm run build in js/")
     cell = executed.cells[4]
     printed = "".join(o.text for o in cell.outputs if o.output_type == "stream")
-    assert printed.split() == ["WidgetRenderer", "1", "0"]  # one widget, closed at the end
+    assert printed.split() == ["WidgetRenderer", "1", "0"]  # one widget, none at the end
     (output,) = displays(cell)
     assert sorted(output.data) == ["text/html", "text/plain"]
     assert "1/3 · stopped after 00:00" in output.data["text/plain"]

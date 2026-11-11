@@ -126,11 +126,15 @@ needs_bundle = pytest.mark.skipif(
 
 
 class Shown:
-    def __init__(self, *, broken: bool = False) -> None:
+    """A display that keeps what it is given. `heard`: the page is known to show widgets."""
+
+    def __init__(self, *, broken: bool = False, heard: bool = True) -> None:
         self.widgets: dict[int, Any] = {}
         self.trees: dict[int, list[dict[str, Any]]] = {}
+        self.html: dict[int, list[dict[str, str]]] = {}
         self.finished: dict[int, dict[str, str]] = {}
         self.broken = broken
+        self.heard = heard
 
     def show(self, root_id, widget, data):
         if self.broken:
@@ -140,8 +144,24 @@ class Shown:
         self.trees[root_id] = [widget.tree]
         widget.observe(lambda change: self.trees[root_id].append(change["new"]), names="tree")
 
-    def finish(self, root_id, data):
-        self.finished[root_id] = data
+    def put(self, root_id, data, *, final):
+        if final:
+            self.finished[root_id] = data
+        else:
+            self.html.setdefault(root_id, []).append(data)
+
+
+@pytest.fixture(autouse=True)
+def unheard(monkeypatch):
+    """Each test starts as a kernel does: no widget has said that it was drawn."""
+    monkeypatch.setattr(widget_module, "_heard", False)
+    monkeypatch.setattr(widget_module, "_disproved", False)
+    monkeypatch.setattr(widget_module, "_asked", False)
+    monkeypatch.setattr(widget_module, "_asked_before_idle", False)
+    monkeypatch.setattr(widget_module, "_idle_since", None)
+    monkeypatch.setattr(widget_module, "_probed", 0)
+    monkeypatch.setattr(widget_module, "_unheard", [])
+    monkeypatch.setattr(widget_module, "_assets_found", False)
 
 
 class Puts:
@@ -214,6 +234,106 @@ def test_where_the_widget_cannot_be_shown_the_bars_are_html(clock):
     assert shown.widgets == {}
     assert [final for _, final in puts.puts].count(True) == 2
     assert "Load 100%" in puts.puts[-1][0]["text/plain"]
+
+
+def slow_loop(renderer, clock, name="Load", items=30):
+    for _ in progress(range(items), name, renderer=renderer, clock=clock):
+        clock.tick(0.1)
+
+
+@needs_bundle
+def test_where_the_widgets_browser_side_is_installed_bars_are_widgets_unasked(clock, monkeypatch):
+    monkeypatch.setattr(widget_module, "_assets_found", True)
+    shown = Shown(heard=False)
+    renderer = WidgetRenderer(shown, delay=0.5)
+    for name in "abcd":
+        slow_loop(renderer, clock, name)
+    assert len(shown.widgets) == 4
+    assert shown.html == {}
+    assert all(len(trees) > 20 for trees in shown.trees.values())
+
+
+@needs_bundle
+def test_no_answer_while_the_kernel_was_idle_means_html_with_a_reason_once(clock, monkeypatch):
+    monkeypatch.setattr(widget_module, "_assets_found", True)
+    shown = Shown(heard=False)
+    renderer = WidgetRenderer(shown, delay=0.5)
+    slow_loop(renderer, clock, "first")
+    widget_module._cell_ended(100.0)
+    widget_module._cell_starts(100.01)  # the next cell was already waiting: no time to answer
+    assert not widget_module._disproved
+    slow_loop(renderer, clock, "second")
+    widget_module._cell_ended(110.0)
+    widget_module._cell_starts(115.0)  # the kernel was idle, and nothing came
+    assert widget_module._disproved
+    slow_loop(renderer, clock, "third")
+    slow_loop(renderer, clock, "fourth")
+    assert len(shown.widgets) == 2
+    third, fourth = sorted(set(shown.html) - set(shown.widgets))
+    assert "This page shows no widgets" in shown.html[third][0]["text/html"]
+    assert "This page shows no widgets" not in shown.finished[third]["text/html"]
+    assert "This page shows no widgets" not in shown.html[fourth][0]["text/html"]
+    next(iter(shown.widgets.values()))._handle_custom_msg({"shown": True}, [])  # a late answer
+    slow_loop(renderer, clock, "fifth")
+    assert len(shown.widgets) == 3
+
+
+@needs_bundle
+def test_a_page_that_does_not_answer_gets_html_that_moves_after_half_a_second(clock):
+    shown = Shown(heard=False)
+    renderer = WidgetRenderer(shown, delay=0.5)
+    slow_loop(renderer, clock)  # three seconds
+    ((root_id, widget),) = shown.widgets.items()
+    assert 3 <= len(shown.trees[root_id]) <= 8  # a widget for half a second
+    pictures = shown.html[root_id]
+    assert 7 <= len(pictures) <= 11  # then HTML, five times a second
+    assert "aria-valuenow" in pictures[-1]["text/html"]
+    assert shown.finished[root_id]["text/plain"].startswith("Load 100%")
+    assert widget.comm is not None  # kept open: its answer may still come
+    assert widget_module._unheard == [widget]
+
+
+@needs_bundle
+def test_after_three_tries_without_an_answer_bars_are_html_from_the_start(clock):
+    shown = Shown(heard=False)
+    renderer = WidgetRenderer(shown, delay=0.5)
+    for name in "abcd":
+        slow_loop(renderer, clock, name)
+    assert len(shown.widgets) == 3
+    (last,) = set(shown.html) - set(shown.widgets)
+    assert len(shown.html[last]) >= 10
+    assert shown.finished[last]["text/plain"].startswith("d 100%")
+
+
+@needs_bundle
+def test_once_a_widget_says_it_was_drawn_bars_stay_widgets(clock):
+    shown = Shown(heard=False)
+    renderer = WidgetRenderer(shown, delay=0.5)
+    slow_loop(renderer, clock, "first")
+    (first,) = shown.widgets.values()
+    first._handle_custom_msg({"shown": True}, [])  # the page's answer, after the cell
+    assert widget_module._heard
+    assert first.comm is None  # and the widget that waited for it is closed
+    slow_loop(renderer, clock, "second")
+    second_id = max(shown.widgets)
+    assert second_id not in shown.html
+    assert len(shown.trees[second_id]) > 20
+    assert shown.widgets[second_id].comm is None
+
+
+@needs_bundle
+def test_an_answer_during_the_first_second_keeps_that_tree_a_widget(clock):
+    shown = Shown(heard=False)
+    renderer = WidgetRenderer(shown, delay=0.5)
+    with progress(total=30, renderer=renderer, clock=clock) as bar:
+        for i in range(30):
+            clock.tick(0.1)
+            bar.update()
+            if i == 8:
+                next(iter(shown.widgets.values()))._handle_custom_msg({"shown": True}, [])
+    assert shown.html == {}
+    (trees,) = shown.trees.values()
+    assert len(trees) > 20
 
 
 def test_notebook_means_the_widget_where_there_is_one_and_html_with_a_note_where_not(

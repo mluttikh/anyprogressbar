@@ -9,6 +9,7 @@ import { type Bar, finished, fraction, later, rows, stalled, stats } from "./for
 
 interface Model {
   get(key: "tree"): Bar | Record<string, never>;
+  send(content: unknown): void;
   on(event: string, callback: () => void): void;
   off(event: string, callback: () => void): void;
 }
@@ -106,6 +107,9 @@ function render({ model, el }: { model: Model; el: HTMLElement }): () => void {
   model.on("change:tree", changed);
   const timer = setInterval(draw, 250);
   draw();
+  // The kernel cannot see whether a page shows widgets; until it hears this it also keeps
+  // the plain HTML moving (widget.py).
+  model.send({ shown: true });
   return () => {
     clearInterval(timer);
     model.off("change:tree", changed);
