@@ -348,6 +348,66 @@ def test_a_loop_that_is_left_is_stopped_whatever_was_caught_on_the_way(clock, re
     assert [(c.status, c.message) for c in recorder.closed] == [(Status.STOPPED, "")] * 3
 
 
+class Lookups:
+    """An object whose missing attributes raise in Python: `hasattr` catches that in C, so the
+    interpreter never says the exception was handled."""
+
+    def __getattr__(self, name):
+        raise AttributeError(name)
+
+
+class Busy:
+    """A renderer that raises and catches exceptions of its own while it draws (marimo's
+    output code does), in Python and in C."""
+
+    def __init__(self):
+        self.closed = []
+
+    def close(self, root):
+        self.closed.append(root)
+
+    def update(self, root):
+        with contextlib.suppress(KeyError):
+            {}["missing"]
+        hasattr(Lookups(), "missing")
+
+
+def test_a_renderers_own_exceptions_do_not_hide_what_the_loop_failed_with(clock):
+    busy = Busy()
+    with pytest.raises(ValueError, match="bad row"):
+        for epoch in progress(range(2), "Outer", renderer=busy, clock=clock):
+            for i in progress(range(5), f"Inner {epoch}"):
+                clock.tick(1.0)
+                if epoch == 1 and i == 2:
+                    raise ValueError("bad row")
+    (closed,) = busy.closed
+    assert (closed.status, closed.message) == (Status.FAILED, "ValueError: bad row")
+    assert [(c.status, c.message) for c in closed.children] == [
+        (Status.FAILED, "ValueError: bad row")
+    ]
+
+
+def test_an_exception_caught_in_c_during_the_loop_does_not_make_a_break_a_failure(clock, recorder):
+    for i in progress(range(10), "Looked up", renderer=recorder, clock=clock):
+        hasattr(Lookups(), "missing")
+        if i == 3:
+            break
+    (closed,) = recorder.closed
+    assert (closed.status, closed.message) == (Status.STOPPED, "")
+
+
+def test_a_loop_fed_through_a_generator_of_ones_own_still_fails(clock, recorder):
+    def each(items):
+        yield from items
+
+    with pytest.raises(ValueError, match="bad"):
+        for i in each(progress(range(10), "Wrapped", renderer=recorder, clock=clock)):
+            if i == 2:
+                raise ValueError("bad")
+    (closed,) = recorder.closed
+    assert (closed.status, closed.message) == (Status.FAILED, "ValueError: bad")
+
+
 def test_an_interrupted_loop_ends_as_stopped(clock, recorder):
     with pytest.raises(KeyboardInterrupt):
         for _ in progress(range(10), "Loop", renderer=recorder, clock=clock):

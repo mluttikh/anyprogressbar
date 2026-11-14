@@ -39,24 +39,47 @@ _ids = itertools.count(1)
 
 # A bar around a `for` loop cannot see an exception in the loop's body: its generator is just
 # closed, as it is after a `break`. So while such a bar runs, the interpreter is asked
-# (`sys.monitoring`) to say which exception is on its way up in each thread, and the generator
-# looks at that when it is closed. (Decision 0002.)
-_flight = threading.local()  # .error: (watch number, the exception that is not yet handled)
+# (`sys.monitoring`) to say which exceptions are raised and handled in each thread, and the
+# generator looks at those when it is closed. (Decision 0002.)
+#
+# Several can be pending at once: code that runs while one is on its way up (a renderer
+# drawing a child that ended) raises and handles its own, and an exception that C code
+# catches (`hasattr`, `getattr` with a default) is never said to be handled. So the one
+# that counts is the newest whose traceback has reached a frame that is running now: the
+# frame that is being left, which closes the generator.
+_flight = threading.local()  # .errors: (watch number, exceptions not yet handled, newest last)
+_PENDING = 16  # the most kept per thread; older ones are long gone
 _watch_lock = threading.Lock()
 _watchers = 0
 _watch_number = 0  # which stretch of watching: what an earlier one saw says nothing now
 _tool: int | None = None
 
 
+def _pending() -> list[BaseException]:
+    kept = getattr(_flight, "errors", None)
+    if kept is None or kept[0] != _watch_number:
+        kept = _flight.errors = (_watch_number, [])
+    return kept[1]
+
+
 def _raised(_code: object, _offset: int, error: BaseException) -> None:
-    if not isinstance(error, GeneratorExit):  # a generator being closed is not a failure
-        _flight.error = (_watch_number, error)
+    if isinstance(error, GeneratorExit):  # a generator being closed is not a failure
+        return
+    pending = _pending()
+    if any(e is error for e in pending):  # raised again on its way (RERAISE)
+        return
+    pending.append(error)
+    if len(pending) > _PENDING:
+        del pending[0]
 
 
 def _handled(_code: object, _offset: int, error: BaseException) -> None:
-    pending = getattr(_flight, "error", None)
-    if pending is not None and pending[1] is error:
-        _flight.error = None
+    """Handled: gone, with whatever was raised after it (while it was on its way up)."""
+    pending = _pending()
+    for i in range(len(pending) - 1, -1, -1):
+        if pending[i] is error:
+            del pending[i:]
+            return
 
 
 def _watch(on: bool) -> None:
@@ -82,10 +105,20 @@ def _watch(on: bool) -> None:
 
 
 def _in_flight() -> BaseException | None:
-    """The exception that is on its way up in this thread, if any."""
-    pending = getattr(_flight, "error", None)
-    if pending is not None and pending[0] == _watch_number:
-        return pending[1]
+    """The exception on its way up through a frame of this thread that is running now, if
+    any: when a loop's generator is closed, the one that is leaving the loop."""
+    pending = _pending()
+    if not pending:
+        return None
+    running: set[int] = set()
+    frame = sys._getframe(1)
+    while frame is not None:
+        running.add(id(frame))
+        frame = frame.f_back
+    for error in reversed(pending):
+        reached = error.__traceback__  # the outermost frame it has come to
+        if reached is not None and id(reached.tb_frame) in running:
+            return error
     return None
 
 
@@ -476,7 +509,7 @@ class Bar[T]:
             elif _current.get() is self:
                 _current.set(self._previous)
             if _watchers == 0:
-                _flight.error = None  # do not keep the exception, and its frames, alive
+                _flight.errors = None  # do not keep the exceptions, and their frames, alive
 
     def __repr__(self) -> str:
         total = "?" if self.total is None else fmt.count(self.total)

@@ -38,6 +38,12 @@
   while such a bar runs, and then makes each raised exception about 0.2 µs dearer. Where no
   tool id is free the bar ends as `stopped`, as before. (A first try, a hook after each
   notebook cell, came too late: the bar had already ended.)
+  Several exceptions can be pending at once: a renderer raises and handles its own while a
+  child that ended is drawn (marimo's output code does), and one that C code catches
+  (`hasattr`, `getattr` with a default) is never said to be handled. Keeping only the
+  newest made the outer loop of a failed pair `stopped` in marimo, and a `break` after such
+  a lookup `failed`. So the newest few are kept, and the one that counts is the newest whose
+  traceback has reached a frame that is running when the generator is closed.
 - **A parent's time remaining counts the done part of its running children.** A child
   covers `weight` units of its parent (one by default: the inner loop of a nested loop).
   The estimator is only told of new ground, so nothing jumps when a child ends and its
@@ -45,8 +51,9 @@
 
 ## Known limits
 
-- **A loop bar that is closed while an unrelated exception is on its way up** in the same
-  thread (a generator kept in a variable and collected then) would be called failed.
+- **A loop bar that is closed while an unrelated exception is on its way up** through a
+  frame that is running (a generator kept in a variable and collected then) would be called
+  failed.
 - **A child that covers less than a unit** (two bars in a row inside one step) makes its
   parent's estimate too hopeful unless it is given a `weight`.
 
