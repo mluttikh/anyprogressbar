@@ -49,4 +49,7 @@ All notable changes to anyprogressbar. The format follows
 - The renderer is chosen by where the code runs (a notebook, a terminal, or anything else),
   by `set_renderer`, or by `ANYPROGRESSBAR=notebook|widget|html|terminal|log|off`. `CI`, `TERM=dumb` and `NO_COLOR`
   are respected.
-- Progress in the tab or taskbar (OSC 9;4) in Windows Terminal, ConEmu and Ghostty.
+- Progress in the tab or taskbar (OSC 9;4) in Windows Terminal, ConEmu and Ghostty. Not
+  where the stream is no terminal: a notebook started from one of them has its environment.
+- The terminal renderer, chosen where the output is no terminal (a notebook's), redraws one
+  line with a carriage return and spaces, and sends no sequence only a terminal reads.

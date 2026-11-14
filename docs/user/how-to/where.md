@@ -32,6 +32,9 @@ set_renderer("log")    # or "terminal", "notebook", "widget", "html", "off"
 set_renderer(None)     # back to choosing by where the code runs
 ```
 
+`"terminal"` also works where the output is no terminal, such as a notebook's: there it
+redraws one line, the top bar, and writes each finished tree whole at the end.
+
 `set_renderer` also takes a renderer object, to set its options:
 
 ```python

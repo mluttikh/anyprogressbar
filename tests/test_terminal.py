@@ -10,7 +10,7 @@ import time
 from typing import Any
 
 import pytest
-from screen import Screen
+from screen import Output, Screen
 
 from anyprogressbar import progress, render, set_renderer, write
 from anyprogressbar.terminal import TerminalRenderer, cells, clip, fill
@@ -469,6 +469,53 @@ def test_taskbar_progress_only_where_the_terminal_is_known_to_take_it(clock, mon
     assert screen.osc[0] == "9;4;1;0"
     assert "9;4;1;25" in screen.osc
     assert screen.osc[-1] == "9;4;0;0"  # cleared at the end
+
+
+def test_where_the_stream_is_not_a_terminal_one_line_is_written_over(clock, monkeypatch):
+    """The renderer chosen in a notebook: no escape sequence but colours, even where the
+    terminal Jupyter was started from takes tab progress (the kernel has its environment)."""
+    monkeypatch.setenv("TERM_PROGRAM", "ghostty")
+    output = Output()
+    renderer = terminal(output, color=True)
+    longest = 0
+    for i in progress(range(40), "Plain", renderer=renderer, clock=clock):
+        clock.tick(0.25 if i < 20 else 0.01)  # the end is quicker
+        (shown,) = output.display()
+        longest = max(longest, len(shown))
+    assert re.sub(r"\x1b\[[\d;]*m", "", output.raw).count("\x1b") == 0
+    (shown,) = output.display()
+    assert shown == "Plain 100% ▕████████████████████▏ 40/40 · done in 00:05 · 7.69 it/s"
+    assert longest > len(shown)  # and nothing is left of the longer lines before it
+
+
+def test_where_the_stream_is_not_a_terminal_nested_bars_are_one_line_and_end_whole(clock):
+    output = Output()
+    renderer = terminal(output)
+    with pytest.raises(KeyError):
+        for epoch in progress(range(3), "Epochs", renderer=renderer, clock=clock):
+            for i in progress(range(4), f"Batches {epoch}"):
+                clock.tick(0.5)
+                assert len(output.display()) == 1
+                assert output.display()[0].startswith("Epochs")
+                if epoch == 1 and i == 2:
+                    raise KeyError("id")
+    shown = output.display()
+    assert [row.split()[0] for row in shown] == ["Epochs", "Batches"]
+    assert shown[0].endswith("1/3 · failed after 00:03: KeyError: 'id'")
+    assert shown[1].endswith("2/4 · failed after 00:01: KeyError: 'id'")
+
+
+def test_where_the_stream_is_not_a_terminal_printing_goes_above_the_line(clock, monkeypatch):
+    output = Output()
+    renderer = terminal(output)
+    monkeypatch.setattr(sys, "stderr", output)
+    for i in progress(range(6), "Work", renderer=renderer, clock=clock):
+        clock.tick(1.0)
+        if i == 3:
+            print("a note", file=sys.stderr)
+    assert output.display()[0] == "a note"
+    assert output.display()[1].startswith("Work 100%")
+    assert len(output.display()) == 2
 
 
 def test_cells_clip_and_fill():

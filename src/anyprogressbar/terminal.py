@@ -295,6 +295,15 @@ def _stream_handlers() -> list[logging.StreamHandler]:
 class TerminalRenderer:
     """Draws bars in place on a terminal.
 
+    On a stream that is not a terminal (a notebook's output, when this renderer is chosen
+    there) only a carriage return can be relied on, and escape sequences other than colours
+    show as text. There the renderer redraws one line, the first tree's top bar, by going
+    back and writing over it, spaces where the old line was longer; it leaves out the tab
+    progress, synchronized output and the hidden cursor; and at the end writes each finished
+    tree whole, as on a terminal. JupyterLab writes over the old line character by character
+    before it takes the escape sequences out, colours too: so the spaces cover the old line
+    as it was written, not as it was seen.
+
     Args:
         file: The stream; standard error by default (looked up at each write).
         interval: Seconds between two redraws by the thread that keeps the clock ticking.
@@ -340,6 +349,7 @@ class TerminalRenderer:
         self._drawn: set[int] = set()  # roots that have been on screen
         self._height = 0  # lines of the frame now on screen
         self._frame = ""
+        self._covers = 0  # on a stream that is not a terminal: the length of its line
         self._hidden = False
         self._thread: threading.Thread | None = None
         atexit.register(self._restore)
@@ -501,10 +511,16 @@ class TerminalRenderer:
                         self._live[root_id] = snapshot
                 self._paint()
 
+    def _back(self, terminal: bool) -> str:
+        """To the start of the frame, with the frame gone."""
+        if not terminal:  # one line, written over
+            return f"\r{' ' * self._covers}\r"
+        up = f"{ESC}[{self._height - 1}A" if self._height > 1 else ""
+        return f"\r{up}{ESC}[J"
+
     def _erase(self) -> None:
         if self._height:
-            up = f"{ESC}[{self._height - 1}A" if self._height > 1 else ""
-            self.file.write(f"\r{up}{ESC}[J")
+            self.file.write(self._back(_is_tty(self.file)))
             self.file.flush()
             self._height = 0
             self._frame = ""
@@ -517,37 +533,43 @@ class TerminalRenderer:
                 return
             self.file.write("\n")  # the bars' own lines go under the unfinished one
             self._suspended = False
+        stream = self.file
+        terminal = _is_tty(stream)
         columns = self._width() - 1  # the last column is left free: no terminal wraps then
         ascii = self._use_ascii()
-        rows: list[str] = []
+        drawn: list[list[Segment]] = []
         for root in self._live.values():
             if root.id in self._drawn or root.elapsed >= self.delay:
                 self._drawn.add(root.id)
-                rows += [self._styled(s) for s in lines(root, columns, ascii=ascii)]
+                drawn += lines(root, columns, ascii=ascii)
+        if not terminal:
+            drawn = drawn[:1]  # it cannot go up a line
+        rows = [self._styled(segments) for segments in drawn]
         frame = "\n".join(rows)
         if not above and frame == self._frame and not (force and rows):
             return
-        out = [_SYNC_ON]
+        out = [_SYNC_ON] if terminal else []
         if self._height:
-            up = f"{ESC}[{self._height - 1}A" if self._height > 1 else ""
-            out.append(f"\r{up}{ESC}[J")
+            out.append(self._back(terminal))
         if above:
             out.append("".join(row + "\n" for row in above))
         out.append(frame)
-        if rows and not self._hidden:
-            out.append(_HIDE)
-            self._hidden = True
-        elif not rows and self._hidden:
-            out.append(_SHOW)
-            self._hidden = False
-        if self._osc:
-            out.append(self._taskbar())
-        out.append(_SYNC_OFF)
-        stream = self.file
+        if terminal:
+            if rows and not self._hidden:
+                out.append(_HIDE)
+                self._hidden = True
+            elif not rows and self._hidden:
+                out.append(_SHOW)
+                self._hidden = False
+            if self._osc:
+                out.append(self._taskbar())
+            out.append(_SYNC_OFF)
         stream.write("".join(out))
         stream.flush()
         self._height = len(rows)
         self._frame = frame
+        # as JavaScript counts characters: what a notebook's page writes over
+        self._covers = len(rows[0].encode("utf-16-le")) // 2 if rows else 0
 
     def _taskbar(self) -> str:
         first = next(iter(self._live.values()), None)

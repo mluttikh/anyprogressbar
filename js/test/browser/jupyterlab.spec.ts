@@ -30,6 +30,12 @@ print("HEARD", widget._heard, widget._disproved)`,
             raise KeyError("id")`,
   `for _ in progress(range(1000), "Endless"):
     time.sleep(0.1)`,
+  // the terminal renderer, chosen in a notebook, whose output is no terminal
+  `from anyprogressbar import set_renderer
+set_renderer("terminal")
+for _ in progress(range(40), "As text"):
+    time.sleep(0.05)
+set_renderer(None)`,
 ];
 
 let server: ChildProcess | null = null;
@@ -62,9 +68,11 @@ async function startLab(port: number): Promise<void> {
       cwd: "..",
       stdio: "ignore",
       // settings (the theme a test switches), workspaces, config and kernels of the test's
-      // own, never the user's: only this environment's Python kernel
+      // own, never the user's: only this environment's Python kernel. Started from a
+      // terminal that takes tab progress, as a kernel can be (it has Jupyter's environment).
       env: {
         ...process.env,
+        TERM_PROGRAM: "ghostty",
         JUPYTER_DATA_DIR: join(dir, ".data"),
         JUPYTERLAB_SETTINGS_DIR: join(dir, ".settings"),
         JUPYTERLAB_WORKSPACES_DIR: join(dir, ".workspaces"),
@@ -195,6 +203,15 @@ test.describe("in JupyterLab", () => {
     await expect(output(4).locator(".apb")).toHaveCount(0, { timeout: 30_000 });
     await expect(said(4)).toHaveText(/^\d+\/1000 · stopped after 00:\d\d: interrupted$/);
     expect(await colour(said(4))).toBe("rgb(232, 147, 12)");
+  });
+
+  test("the terminal renderer writes one line over itself, and nothing a terminal alone reads", async () => {
+    test.setTimeout(LIMIT);
+    await runCell(5);
+    const text = output(5).locator(".jp-OutputArea-output");
+    // the spaces that wrote over longer lines stay after it: unseen
+    await expect(text).toHaveText(/^As text 100% ▕█+▏ 40\/40 · done in 00:0[23] · \d+(\.\d+)? it\/s\s*$/, { timeout: 30_000 });
+    expect(await text.innerText()).not.toContain("]9;4");
   });
 
   test("the saved notebook holds plain HTML and text, and no widget", async () => {

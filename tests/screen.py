@@ -65,3 +65,40 @@ class Screen:
         while lines and not lines[-1]:
             lines.pop()
         return lines
+
+
+_CSI = re.compile(r"\x1b\[[\d;?]*[A-Za-z]")
+
+
+class Output(Screen):
+    """A notebook's output area, as JupyterLab 4.6 shows a stream (seen in a browser). It is
+    not a terminal. A carriage return goes back to the start of the line, and what follows
+    is written over the old characters one by one: escape sequences too, as so many
+    characters. Only then are the `ESC [` sequences taken out (colours are kept as
+    colours); an `ESC ]` one stays, as text. Nothing moves the cursor up or erases."""
+
+    def isatty(self) -> bool:
+        return False
+
+    def write(self, text: str) -> int:
+        self.raw += text
+        for char in text:
+            if char == "\r":
+                self.col = 0
+            elif char == "\n":
+                self.row += 1
+                self.col = 0
+                while len(self.rows) <= self.row:
+                    self.rows.append([])
+            else:
+                line = self.rows[self.row]
+                line.extend(" " * (self.col - len(line)))
+                line[self.col : self.col + 1] = [char]
+                self.col += 1
+        return len(text)
+
+    def display(self) -> list[str]:
+        lines = [_CSI.sub("", "".join(row)).rstrip() for row in self.rows]
+        while lines and not lines[-1]:
+            lines.pop()
+        return lines
