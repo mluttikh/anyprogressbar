@@ -20,8 +20,9 @@ Seen working in JupyterLab 4.6 and in marimo. VS Code and Colab have not been tr
 
 ## marimo
 
-Nothing to do: bars are the cell's output. Bars that run one after another in a cell are
-shown together.
+Nothing to do: bars are part of the cell's output. Each loop's bar has its own place there,
+so bars that run one after another in a cell are shown together, under whatever the cell
+showed before them with `mo.output.append`.
 
 When a cell raises, or is interrupted, marimo shows the error in place of the cell's
 output, and the bars there go with it. So bars that end that way are also written to the

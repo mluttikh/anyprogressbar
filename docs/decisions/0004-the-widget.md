@@ -56,8 +56,8 @@
 - **"notebook" means the widget where anywidget is installed and the bundle is built, and
   the HTML bar where not**, which then says once how to get the widget. `widget` and `html`
   force one. If making or showing the widget fails, the bars are HTML from then on.
-- **In marimo** the widget is shown with `mo.ui.anywidget` inside the cell's output, and
-  replaced by HTML at the end, as elsewhere.
+- **In marimo** the widget is shown with `mo.ui.anywidget` in the tree's own place in the
+  cell's output (decision 0003), and replaced by HTML there at the end, as elsewhere.
 - **The bundle is built with esbuild from TypeScript** and is not committed; the wheel
   build makes it (hatch-jupyter-builder), as in anytrellis and anytimeline.
 
@@ -69,8 +69,6 @@
 
 - A page opened while a bar runs counts the time from when it opened, not from when the
   picture was made.
-- A tree that fails before it was shown is recorded through the HTML renderer; in marimo
-  that is a separate group of outputs from the widgets of the same run.
 - The colours are fixed mid-tones; they do not follow the host's theme.
 - **In marimo a tree that ends with an exception is also written to the console**, as text.
   marimo puts the error of a cell that raises, or is interrupted, in place of its output,

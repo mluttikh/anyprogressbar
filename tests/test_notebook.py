@@ -163,15 +163,73 @@ def test_html_and_text_of_a_snapshot(clock):
     bar.close()
 
 
-def test_marimo_shows_the_roots_of_one_run_together(monkeypatch):
-    replaced = []
+class Cell:
+    """A marimo cell's output, as marimo keeps it: a list that `mo.output` functions change."""
+
+    def __init__(self) -> None:
+        self.items: list[Any] = []
+
+    def __len__(self) -> int:
+        return len(self.items)
+
+    def replace_at_index(self, item, idx):
+        if idx > len(self.items):
+            raise IndexError(idx)
+        if idx == len(self.items):
+            self.items.append(item)
+        else:
+            self.items[idx] = item
+
+
+def fake_marimo(monkeypatch, cell: Cell | None) -> list[Any]:
+    """marimo, running a cell whose output is `cell` (None: it cannot be read). Returns what
+    `mo.output.replace` was given."""
+    from anyprogressbar import notebook as notebook_module
+
+    replaced: list[Any] = []
+
+    def place(item, idx):
+        assert cell is not None, "without the cell's output nothing is put in its place"
+        cell.replace_at_index(item, idx)
+
     fake = types.SimpleNamespace(
         Html=lambda markup: markup,
-        output=types.SimpleNamespace(replace=replaced.append),
+        vstack="".join,
+        output=types.SimpleNamespace(replace=replaced.append, replace_at_index=place),
         running_in_notebook=lambda: True,
     )
     monkeypatch.setitem(sys.modules, "marimo", fake)
+    monkeypatch.setattr(notebook_module, "_cell_outputs", lambda: cell)
+    return replaced
+
+
+def test_in_marimo_each_tree_has_its_place_and_the_cells_other_output_stays(monkeypatch):
+    cell = Cell()
+    fake_marimo(monkeypatch, cell)
     assert host() == "marimo"
+    cell.items.append("<note>")  # mo.output.append in the cell, before the loops
+    display = MarimoDisplay()
+    display.put(1, {"text/html": "<a1>"}, final=False)
+    display.put(1, {"text/html": "<a2>"}, final=True)
+    display.put(2, {"text/html": "<b1>"}, final=False)  # the next loop: the first one stays
+    cell.items.append("<chart>")  # something the loop shows
+    display.put(2, {"text/html": "<b2>"}, final=True)
+    assert cell.items == ["<note>", "<a2>", "<b2>", "<chart>"]
+    # the cell runs again: a new output
+    cell = Cell()
+    fake_marimo(monkeypatch, cell)
+    display.put(3, {"text/html": "<c1>"}, final=False)
+    assert cell.items == ["<c1>"]
+    # the output is cleared while the tree runs: it goes at the end again
+    cell.items.clear()
+    display.put(3, {"text/html": "<c2>"}, final=True)
+    assert cell.items == ["<c2>"]
+
+
+def test_where_the_cells_output_cannot_be_read_the_trees_of_one_run_are_shown_together(
+    monkeypatch,
+):
+    replaced = fake_marimo(monkeypatch, None)
     display = MarimoDisplay()
     display.put(1, {"text/html": "<a1>"}, final=False)
     display.put(2, {"text/html": "<b1>"}, final=False)
@@ -207,20 +265,15 @@ def test_the_last_picture_says_whether_the_tree_ended_with_an_exception(clock):
 
 def test_in_marimo_a_tree_that_ended_with_an_exception_is_also_in_the_console(monkeypatch, capsys):
     """marimo puts a raising cell's error in place of its output; its console stays."""
-    replaced = []
-    fake = types.SimpleNamespace(
-        Html=lambda markup: markup,
-        output=types.SimpleNamespace(replace=replaced.append),
-        running_in_notebook=lambda: True,
-    )
-    monkeypatch.setitem(sys.modules, "marimo", fake)
+    cell = Cell()
+    fake_marimo(monkeypatch, cell)
     display = MarimoDisplay()
     picture = {"text/html": "<a>", "text/plain": "Import  40% ▕██▏ 4/10 · failed after 00:01"}
     display.put(1, picture, final=False)
     display.put(1, picture, final=True)  # ended otherwise: the output keeps it
     assert capsys.readouterr().err == ""
     display.put(2, picture, final=True, raised=True)
-    assert replaced[-1] == "<a>"
+    assert cell.items == ["<a>", "<a>"]
     assert capsys.readouterr().err == picture["text/plain"] + "\n"
 
 

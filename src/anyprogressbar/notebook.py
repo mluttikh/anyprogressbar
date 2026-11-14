@@ -147,9 +147,27 @@ class IPythonDisplay:
             self._handles.pop(root_id, None)
 
 
+def _cell_outputs() -> Any:
+    """The output of the marimo cell that is running (a new one each time the cell runs), or
+    None. marimo does not tell this; it is read from its runtime."""
+    try:
+        from marimo._runtime.context import get_context
+
+        running = get_context().execution_context
+        if running is None:
+            return None
+        outputs = running.output
+        len(outputs)  # what is used of it: its length, and that it is the same object
+    except Exception:
+        return None
+    return outputs
+
+
 class MarimoDisplay:
-    """marimo replaces a cell's whole output, so the roots of one run are shown together:
-    those since the last moment that none was live.
+    """Each tree has its own place in the cell's output: added when it is first shown, and
+    replaced there after, so the cell's other output stays (trees before it, and what
+    `mo.output.append` added). Where the cell's output cannot be read, the trees of one run
+    are shown together in place of the whole output: those since none was live.
 
     A cell that raises, or is interrupted, has its error put in place of its output, and the
     bars there are lost; the cell's console stays, above the traceback. So a tree that ends
@@ -158,7 +176,10 @@ class MarimoDisplay:
     """
 
     def __init__(self) -> None:
-        self._shown: dict[int, Any] = {}  # HTML, or something else marimo can show (a widget)
+        # root id -> (the cell's output, the tree's place in it)
+        self._places: dict[int, tuple[Any, int]] = {}
+        # without the cell's output: HTML, or something else marimo can show (a widget)
+        self._shown: dict[int, Any] = {}
         self._live: set[int] = set()
 
     def put(self, root_id: int, data: dict[str, str], *, final: bool, raised: bool = False) -> None:
@@ -170,19 +191,30 @@ class MarimoDisplay:
     def show(self, root_id: int, item: Any, *, final: bool) -> None:
         import marimo
 
+        if isinstance(item, str):
+            item = marimo.Html(item)
+        outputs = _cell_outputs()
+        if outputs is None:
+            self._show_together(root_id, item, final=final)
+            return
+        place = self._places.get(root_id)
+        if place is None or place[0] is not outputs or place[1] > len(outputs):
+            # new, or the cell's output was cleared since: at the end
+            place = self._places[root_id] = (outputs, len(outputs))
+        marimo.output.replace_at_index(item, place[1])
+        if final:
+            del self._places[root_id]
+
+    def _show_together(self, root_id: int, item: Any, *, final: bool) -> None:
+        import marimo
+
         if root_id not in self._shown and not self._live:
             self._shown.clear()
         self._shown[root_id] = item
         self._live.add(root_id)
         if final:
             self._live.discard(root_id)
-        items = list(self._shown.values())
-        if all(isinstance(item, str) for item in items):
-            marimo.output.replace(marimo.Html("".join(items)))
-        else:
-            marimo.output.replace(
-                marimo.vstack([marimo.Html(i) if isinstance(i, str) else i for i in items])
-            )
+        marimo.output.replace(marimo.vstack(list(self._shown.values())))
 
 
 class NotebookRenderer:

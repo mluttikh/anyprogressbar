@@ -5,6 +5,7 @@ These start a kernel and a marimo run, so they take a few seconds.
 
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -104,6 +105,42 @@ def test_in_marimo_the_bar_is_the_cells_output(tmp_path: Path):
     assert "In marimo" in markup
     assert "8/8 \\u00b7 done in 00:00" in markup or "8/8 · done in 00:00" in markup
     assert "In marimo:" not in run.stderr  # no log lines beside it
+
+
+def test_in_marimo_loops_one_after_another_keep_their_bars_and_the_cells_other_output(
+    tmp_path: Path,
+):
+    app = tmp_path / "app.py"
+    app.write_text(
+        "import marimo\n"
+        "app = marimo.App()\n\n"
+        "@app.cell\n"
+        "def _():\n"
+        "    import time\n"
+        "    import marimo as mo\n"
+        "    from anyprogressbar import progress\n"
+        "    mo.output.append(mo.md('A note of the cell'))\n"
+        "    for _ in progress(range(6), 'First'):\n"
+        "        time.sleep(0.12)\n"
+        "    for _ in progress(range(6), 'Second'):\n"
+        "        time.sleep(0.12)\n"
+        "    return\n",
+        encoding="utf-8",
+    )
+    page = tmp_path / "app.html"
+    run = subprocess.run(
+        [sys.executable, "-m", "marimo", "export", "html", str(app), "-o", str(page)],
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert run.returncode == 0, run.stderr
+    markup = page.read_text(encoding="utf-8")
+    # in the stored output (the code holds the note too, but not as a rendered paragraph)
+    assert re.search(r"paragraph.{0,20}A note of the cell", markup)
+    assert 'aria-label=\\"First\\"' in markup
+    assert 'aria-label=\\"Second\\"' in markup
 
 
 def test_in_marimo_bars_that_ended_with_an_exception_are_kept_in_the_console(tmp_path: Path):

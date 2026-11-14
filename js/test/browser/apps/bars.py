@@ -34,5 +34,14 @@ def _(progress, time):
                 raise KeyError("id")
 
 
+@app.cell
+def _(progress, time):
+    # loops one after another: each keeps its place in the output
+    for _ in progress(range(4), "First"):
+        time.sleep(0.3)
+    for _ in progress(range(8), "Second"):
+        time.sleep(0.3)
+
+
 if __name__ == "__main__":
     app.run()

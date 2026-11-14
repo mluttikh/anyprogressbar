@@ -35,8 +35,15 @@
 - The plain-HTML renderer and the static picture share their markup.
 - No marimo-specific renderer; but a marimo-specific way to show HTML. marimo need not have
   IPython installed (the spike's environment happened to), so there the HTML goes through
-  `mo.output.replace`. That replaces a cell's whole output, so the trees of one run are shown
-  together: those since the last moment none was live.
+  `mo.output`. At first that was `mo.output.replace`, with the trees of one run shown
+  together (those since the last moment none was live). But that replaces the cell's whole
+  output: a loop after another one wiped the first one's bar, and both wiped what the cell
+  had put there with `mo.output.append` (seen in an export, 14 November 2026). Now each tree
+  has its own place, added at the end when it is first shown and replaced there with
+  `mo.output.replace_at_index`. The place is an index into the running cell's output, which
+  marimo does not tell; it is read from marimo's runtime
+  (`get_context().execution_context.output`, a new list for each run of a cell). Where that
+  cannot be read, it falls back to the trees of one run in place of the whole output.
 - The HTML has inline styles only, no script and no style element, so it survives hosts that
   strip those. Colours are mid-tones that read on light and dark pages.
 - The HTML renderer does not draw from a thread: output sent from another thread can land in

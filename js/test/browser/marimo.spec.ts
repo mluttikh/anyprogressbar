@@ -81,6 +81,19 @@ for (const [mode, base] of [["run", 2960], ["edit", 2970]] as const) {
       await page.screenshot({ path: `test-results/shots/marimo-${mode}-ended.png`, fullPage: true });
     });
 
+    test("loops one after another in a cell keep their bars", async () => {
+      test.setTimeout(60_000);
+      const first = page.getByRole("progressbar", { name: "First", exact: true });
+      const second = page.getByRole("progressbar", { name: "Second", exact: true });
+      // while the second runs, as the widget, the first's record stays above it
+      await expect(said("Second")).toHaveText(/^[1-7]\/8 · /, { timeout: 30_000 });
+      await expect(first).toHaveAttribute("aria-valuenow", "100");
+      await expect(said("First")).toHaveText(/^4\/4 · done in/);
+      expect((await first.boundingBox())!.y).toBeLessThan((await second.boundingBox())!.y);
+      await expect(said("Second")).toHaveText(/^8\/8 · done in/, { timeout: 15_000 });
+      await expect(first).toHaveCount(1);
+    });
+
     test("nothing went wrong in the page", () => {
       expect(errors).toEqual([]);
     });
