@@ -25,10 +25,18 @@ for (const [mode, base] of [["run", 2960], ["edit", 2970]] as const) {
       test.setTimeout(120_000);
       const port = base + info.workerIndex;
       url = `http://127.0.0.1:${port}/`;
+      // the editor runs the cells when the page opens only where `auto_instantiate` is set,
+      // which marimo 0.25 no longer sets by default: a user's own config decided it. Set
+      // through marimo's (private) environment override, which comes after the user's config.
+      const env = {
+        ...process.env,
+        MARIMO_SKIP_UPDATE_CHECK: "1",
+        _MARIMO_CONFIG_OVERLOAD_RUNTIME_AUTO_INSTANTIATE: process.env.APB_MARIMO_AUTORUN ?? "true",
+      };
       server = spawn(
         "uv",
         ["run", "marimo", mode, "js/test/browser/apps/bars.py", "--headless", "--port", String(port), "--no-token"],
-        { cwd: "..", stdio: "ignore", env: { ...process.env, MARIMO_SKIP_UPDATE_CHECK: "1" } },
+        { cwd: "..", stdio: "ignore", env },
       );
       for (let i = 0; i < 240; i++) {
         try {

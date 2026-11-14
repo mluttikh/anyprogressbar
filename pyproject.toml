@@ -126,3 +126,6 @@ include = ["src", "tests", "scripts"]
 
 [tool.ty.environment]
 python-version = "3.12"
+# code for one platform (the Windows console, POSIX pseudo-terminals) is checked as on any
+# platform, so the check says the same on every machine
+python-platform = "all"

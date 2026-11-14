@@ -212,7 +212,7 @@ def _windows_ansi() -> bool:
     try:
         import ctypes
 
-        kernel32 = ctypes.windll.kernel32  # ty: ignore[missing-attribute]
+        kernel32 = ctypes.windll.kernel32
         handle = kernel32.GetStdHandle(-12)  # standard error
         mode = ctypes.c_uint32()
         if not kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
