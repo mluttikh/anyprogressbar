@@ -1,0 +1,102 @@
+# Releases: push a tag v<version> (the version in pyproject.toml) to publish that version.
+#
+#   1. build: checks the tag is the package's version, and the changelog has a section for
+#      it; runs the tests; builds the sdist, and the wheel from it (the JavaScript bundle is
+#      built then, with Node.js); checks their metadata; and installs the wheel in a clean
+#      environment, alone and with the `widget` extra, where a loop draws through each
+#      renderer (scripts/smoke.py);
+#   2. publish: uploads them to PyPI with trusted publishing (no token: PyPI trusts this
+#      workflow in the "pypi" environment of this repository, which only tags v* may use and
+#      which waits for the maintainer's approval);
+#   3. github-release: a GitHub release for the tag, with the changelog's notes and the files.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: The tag is the package's version
+        run: |
+          version=$(uv run --no-project --python 3.12 python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::tag $GITHUB_REF_NAME, but pyproject.toml says version $version"; exit 1
+          fi
+          grep -q "^__version__ = \"$version\"$" src/anyprogressbar/__init__.py || {
+            echo "::error::src/anyprogressbar/__init__.py does not say __version__ = \"$version\""; exit 1
+          }
+          grep -q "^## \[$version\]" CHANGELOG.md || {
+            echo "::error::CHANGELOG.md has no section for $version"; exit 1
+          }
+      - name: Build the sdist and the wheel
+        run: uv build
+      - name: Check their metadata
+        run: uvx twine check --strict dist/*
+      - name: The tests
+        run: uv run pytest
+      - name: Install the wheel alone, then with the widget, and draw a bar of each kind
+        run: |
+          wheel=$(ls "$PWD"/dist/*.whl)
+          uv venv --python 3.12 /tmp/alone
+          uv pip install --python /tmp/alone/bin/python "$wheel"
+          /tmp/alone/bin/python -I scripts/smoke.py
+          uv venv --python 3.12 /tmp/widget
+          uv pip install --python /tmp/widget/bin/python "anyprogressbar[widget] @ file://$wheel"
+          /tmp/widget/bin/python -I scripts/smoke.py | tee smoke.txt
+          grep -q "with the widget" smoke.txt
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/anyprogressbar/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+      - name: Release notes from the changelog
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" { on = 1; next }
+            on && /^## \[/ { exit }
+            on && /^\[[^]]+\]: / { next }
+            on { print }
+          ' CHANGELOG.md > notes.md
+          test -s notes.md || { echo "::error::no notes for $version in CHANGELOG.md"; exit 1; }
+      - name: Create the GitHub release
+        run: gh release create "$GITHUB_REF_NAME" dist/* --title "$GITHUB_REF_NAME" --notes-file notes.md
+        env:
+          GH_TOKEN: ${{ github.token }}

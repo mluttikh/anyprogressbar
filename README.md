@@ -65,3 +65,14 @@ uv run ruff check . && uv run ruff format --check . && uv run ty check && uv run
 (cd js && npx playwright install chromium firefox webkit)   # once: browsers for the next line
 (cd js && npm run test:browser)           # the widget in three browsers, JupyterLab and marimo (build the docs first)
 ```
+
+### Releasing
+
+1. Set the version in `pyproject.toml` and in `src/anyprogressbar/__init__.py`, and turn the
+   changelog's `[Unreleased]` section into `## [<version>] - <date>`. Commit and push.
+2. Tag and push the tag: `git tag v<version> && git push origin v<version>`.
+3. The release workflow (`.github/workflows/release.yml`) checks that the tag, the version
+   and the changelog agree, runs the tests, builds the sdist and the wheel, and installs the
+   wheel in clean environments. It then waits for approval in the `pypi` environment, which
+   only `v*` tags can use; once approved, it publishes to PyPI with trusted publishing and
+   makes a GitHub release with the changelog's notes.
