@@ -6,6 +6,10 @@ All notable changes to anyprogressbar. The format follows
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-14
+
+The first release.
+
 ### Added
 
 - The model: `progress(...)` (a `Bar`) wraps an iterable, works as a context manager, or is
@@ -54,3 +58,6 @@ All notable changes to anyprogressbar. The format follows
   where the stream is no terminal: a notebook started from one of them has its environment.
 - The terminal renderer, chosen where the output is no terminal (a notebook's), redraws one
   line with a carriage return and spaces, and sends no sequence only a terminal reads.
+
+[Unreleased]: https://github.com/mluttikh/anyprogressbar/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/mluttikh/anyprogressbar/releases/tag/v0.1.0

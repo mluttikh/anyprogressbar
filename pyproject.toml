@@ -1,6 +1,6 @@
 [project]
 name = "anyprogressbar"
-version = "0.1.0.dev0"
+version = "0.1.0"
 description = "Progress bars for notebooks (an anywidget) and terminals, from one model"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -9,7 +9,7 @@ license-files = ["LICENSE"]
 authors = [{ name = "mluttikh", email = "mluttikhof@gmail.com" }]
 keywords = ["progress bar", "progress", "eta", "jupyter", "marimo", "anywidget", "terminal"]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "Framework :: Jupyter",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
