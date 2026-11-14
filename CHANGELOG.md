@@ -39,7 +39,8 @@ All notable changes to anyprogressbar. The format follows
   text, so the saved notebook needs no widget state. Used wherever anywidget is installed;
   without it the HTML bar says once how to get it. Where the notebook page cannot show
   widgets (Jupyter started from an environment without anywidget), the bar is the HTML one
-  and says so once.
+  and says so once. In VS Code, which puts every widget on white with black text, the bars
+  are on the editor's own ground, in its text colour.
 - On a terminal, what is printed or logged while bars are live goes above them, and a
   prompt for `input()` has the screen until it is answered. `write(...)` does the same for
   a stream of your own.

@@ -238,6 +238,45 @@ test("text takes the colour of the page it is on", async ({ page }) => {
   await expect(page.locator(".apb-numbers")).toHaveCSS("color", "rgb(230, 232, 235)");
 });
 
+test("in VS Code the bars are on the editor's ground, in its text colour", async ({ page }) => {
+  // VS Code's dark theme as its Jupyter extension leaves a widget's output: the editor's
+  // colours as variables, and the widget on white, in black (ipywidgets' own colour)
+  await page.evaluate(() => {
+    const style = document.createElement("style");
+    style.textContent = `
+      :root { --vscode-editor-foreground: rgb(204, 204, 204); }
+      body { background: #1f1f1f; color: rgb(204, 204, 204); }
+      .cell-output-ipywidget-background { background: #fff !important; }
+      .jupyter-widgets { color: black; }`;
+    document.head.appendChild(style);
+    const cell = document.getElementById("cell")!;
+    const output = document.createElement("div");
+    output.className = "cell-output-ipywidget-background";
+    cell.replaceWith(output);
+    output.appendChild(cell);
+    cell.className = "jupyter-widgets";
+  });
+  await show(page, bar());
+  await expect(page.locator(".cell-output-ipywidget-background")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(page.locator(".apb-name")).toHaveCSS("color", "rgb(204, 204, 204)");
+  await expect(page.locator(".apb-numbers")).toHaveCSS("color", "rgb(204, 204, 204)");
+});
+
+test("other widgets in VS Code keep the white ground it gives them", async ({ page }) => {
+  await page.evaluate(() => {
+    const style = document.createElement("style");
+    style.textContent = ".cell-output-ipywidget-background { background: #fff !important; }";
+    document.head.appendChild(style);
+    const other = document.createElement("div");
+    other.className = "cell-output-ipywidget-background";
+    other.id = "other";
+    other.textContent = "another widget";
+    document.body.appendChild(other);
+  });
+  await show(page, bar());
+  await expect(page.locator("#other")).toHaveCSS("background-color", "rgb(255, 255, 255)");
+});
+
 test("with reduced motion asked for, nothing moves", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await show(page, bar());

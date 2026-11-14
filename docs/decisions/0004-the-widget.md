@@ -5,7 +5,9 @@
 - Browser tests, 14 November 2026 (`js/test/browser`, Playwright): the widget's module in
   Chromium, Firefox and WebKit on a clock the test moves; then in a real JupyterLab 4.6 and
   in marimo's live page (`marimo run`), and the documentation's replay, in Chromium.
-  **Not tested: VS Code notebooks and Colab.**
+- VS Code, 14 November 2026 (by hand, Jupyter extension 2025.9): in a dark theme the
+  widget was on white, and the HTML that took its place at the end on the editor's ground.
+  **Colab not tested.**
 
 ## Decision
 
@@ -52,6 +54,13 @@
 - **Running bars have faint ribbing that moves backwards**, which makes a bar feel faster
   (Harrison, Yeo and Hudson 2010). Without a total a block runs along the track and claims
   no value. `prefers-reduced-motion` turns both off.
+- **In VS Code the bars are on the editor's ground, in its text colour.** Its Jupyter
+  extension puts every widget's output on white (`.cell-output-ipywidget-background {
+  background: #fff !important }`) with ipywidgets' black text, whatever the theme; in a
+  dark theme the bar then changed from white to dark when it ended. The widget's CSS makes
+  that ground transparent where it holds bars (`:has(.apb)`, so other widgets keep their
+  white) and takes the text colour from `--vscode-editor-foreground`. Tested in the browser
+  tests against a copy of that styling.
 - **anywidget is imported when the first bar is shown**, never at `import anyprogressbar`.
 - **"notebook" means the widget where anywidget is installed and the bundle is built, and
   the HTML bar where not**, which then says once how to get the widget. `widget` and `html`
@@ -82,4 +91,4 @@
 
 ## To do
 
-- Run it in VS Code and Colab.
+- Run it in Colab.

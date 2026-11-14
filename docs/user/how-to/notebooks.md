@@ -16,7 +16,9 @@ ended, without widget state and without Python.
 
 Work done within half a second shows no bar at all.
 
-Seen working in JupyterLab 4.6 and in marimo. VS Code and Colab have not been tried yet.
+Seen working in JupyterLab 4.6, VS Code and marimo. Colab has not been tried yet. In VS
+Code the bars take the editor's colours, light or dark, although VS Code puts other widgets
+on white.
 
 ## marimo
 

@@ -17,6 +17,17 @@
   max-width: 860px;
   font: 13px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
 }
+/* VS Code puts every widget's output on a white ground with black text, whatever the
+   editor's theme (its Jupyter extension: `.cell-output-ipywidget-background { background:
+   #fff !important }`). Where the bars are, the ground is the editor's again and the text its
+   colour, as for the plain HTML that takes the bars' place at the end. Outside VS Code no
+   element has that class, and without the editor's colour the text inherits as before. */
+.cell-output-ipywidget-background:has(.apb) {
+  background: transparent !important;
+}
+.cell-output-ipywidget-background .apb {
+  color: var(--vscode-editor-foreground);
+}
 .apb-name {
   font-weight: 600;
   overflow: hidden;
