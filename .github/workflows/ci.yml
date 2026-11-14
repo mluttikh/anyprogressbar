@@ -1,5 +1,7 @@
 # Checks on every push and pull request: lint, types and tests on Python 3.12 to 3.15,
-# on Linux and Windows, with the widget's bundle built; and the JavaScript's types and tests.
+# on Linux and Windows, with the widget's bundle built; the JavaScript's types and tests; and
+# the documentation, built strictly, with the browser tests (Playwright: the widget in
+# Chromium, Firefox and WebKit, then in a real JupyterLab and marimo, and the built pages).
 name: CI
 
 on:
@@ -68,7 +70,7 @@ jobs:
       - run: npm run build
 
   docs:
-    name: Documentation (strict build; the examples run)
+    name: Documentation (strict build; the examples run) and browser tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -84,3 +86,16 @@ jobs:
         working-directory: js
       - run: uv sync
       - run: uv run python scripts/build_docs.py
+      - run: npx playwright install --with-deps chromium firefox webkit
+        working-directory: js
+      - name: Browser tests
+        run: npx playwright test
+        working-directory: js
+        env:
+          CI: "1"
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-results
+          path: js/test-results/
+          retention-days: 7

@@ -2,8 +2,10 @@
 
 - Status: **implemented**, 11 November 2026 (`widget.py`, `js/`, `tests/test_widget.py`,
   `js/test/format.test.ts`, and a real kernel in `tests/test_hosts.py`).
-- Seen working in JupyterLab 4.6 in Chrome, and run in marimo through `marimo export html`.
-  **Not tested: VS Code notebooks, Colab, and marimo's live page.**
+- Browser tests, 14 November 2026 (`js/test/browser`, Playwright): the widget's module in
+  Chromium, Firefox and WebKit on a clock the test moves; then in a real JupyterLab 4.6 and
+  in marimo's live page (`marimo run`), and the documentation's replay, in Chromium.
+  **Not tested: VS Code notebooks and Colab.**
 
 ## Decision
 
@@ -43,6 +45,10 @@
   where they cannot.
 - **At most ten pictures a second** go to the page (the bar's own `min_interval`), each a
   few hundred bytes for a bar. Not measured beyond that.
+- **The track and the text share the width a third and two thirds**, the track at least
+  60 px, and the text wraps. The track had a fixed largest width at first; on a page
+  narrower than about 600 px it took the room first and left the text a column a word wide
+  (found by the browser tests). The plain HTML has the same grid.
 - **Running bars have faint ribbing that moves backwards**, which makes a bar feel faster
   (Harrison, Yeo and Hudson 2010). Without a total a block runs along the track and claims
   no value. `prefers-reduced-motion` turns both off.
@@ -66,8 +72,11 @@
 - A tree that fails before it was shown is recorded through the HTML renderer; in marimo
   that is a separate group of outputs from the widgets of the same run.
 - The colours are fixed mid-tones; they do not follow the host's theme.
+- **In marimo, the bars of a cell that raises are lost**: marimo puts the cell's error in
+  place of its output, which held them (`marimo run` shows nothing there at all). Jupyter
+  keeps both. A browser test expects them, and is marked as failing until they are kept.
 
 ## To do
 
 - Run it in VS Code and Colab.
-- Look at marimo's live page, and at what it stores for a finished bar.
+- Keep the failed bars of a marimo cell that raises (see Known limits).

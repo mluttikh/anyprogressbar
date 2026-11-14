@@ -8,7 +8,10 @@
   --apb-stopped: #e8930c;
   --apb-pending: #868e96;
   display: grid;
-  grid-template-columns: fit-content(18em) max-content minmax(60px, 240px) minmax(0, 1fr);
+  /* the track and the text share what is left, a third and two thirds: on a narrow page the
+     track gives way too, before the text is squeezed (a fixed largest width for the track
+     took the room first, and left the text a column a word wide) */
+  grid-template-columns: fit-content(18em) max-content minmax(60px, 1fr) minmax(0, 2fr);
   gap: 4px 10px;
   align-items: center;
   max-width: 860px;
@@ -29,6 +32,7 @@
 }
 .apb-numbers {
   opacity: 0.8;
+  overflow-wrap: anywhere;
 }
 .apb-numbers[data-status="failed"],
 .apb-numbers[data-status="stopped"],

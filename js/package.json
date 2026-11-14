@@ -8,9 +8,11 @@
     "build": "esbuild src/widget.ts src/widget.css --bundle --format=esm --target=es2022 --minify --outdir=../src/anyprogressbar/static",
     "dev": "esbuild src/widget.ts src/widget.css --bundle --format=esm --target=es2022 --sourcemap=inline --outdir=../src/anyprogressbar/static --watch",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:browser": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.0",
     "@types/node": "^26.6.3",
     "esbuild": "^0.28.2",
     "typescript": "^7.0.2",

@@ -51,6 +51,8 @@ dev = [
     "zensical>=0.0.66",
     "mkdocstrings[python]>=1.0.6",
     "markdown-exec>=1.12.3",
+    # the widget in a real JupyterLab, driven by the browser tests (js/test/browser)
+    "jupyterlab>=4",
 ]
 
 [build-system]
@@ -111,6 +113,8 @@ ignore = [
 "scripts/*" = ["T20"]  # tools that report on the command line
 # notebooks read as a user would write them: no annotations, loop variables with real names
 "examples/*" = ["ANN", "T20", "B007"]
+# the marimo app the browser tests run: cells, like the examples
+"js/test/browser/apps/*" = ["ANN"]
 "tests/*" = [
     "ANN",
     "PT012",  # the block that raises is the bar's own `with` block: that is what is tested

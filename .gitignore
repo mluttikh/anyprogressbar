@@ -23,3 +23,8 @@ site/
 
 # the widget bundle, copied into the documentation by scripts/build_docs.py
 docs/user/assets/anyprogressbar/
+
+# browser tests: the harness's bundle, and what a run leaves (screenshots, traces)
+js/test/browser/dist/
+js/test-results/
+js/playwright-report/

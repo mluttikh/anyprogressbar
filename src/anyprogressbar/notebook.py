@@ -27,8 +27,8 @@ _COLOR = {
     Status.STOPPED: "#e8930c",
 }
 _GRID = (
-    "display:grid;grid-template-columns:fit-content(18em) max-content minmax(60px,240px) "
-    "minmax(0,1fr);gap:4px 10px;align-items:center;font:13px/1.5 system-ui,-apple-system,"
+    "display:grid;grid-template-columns:fit-content(18em) max-content minmax(60px,1fr) "
+    "minmax(0,2fr);gap:4px 10px;align-items:center;font:13px/1.5 system-ui,-apple-system,"
     "'Segoe UI',sans-serif;max-width:860px"
 )
 _TRACK = "height:10px;border-radius:5px;background:rgba(128,128,128,.28);overflow:hidden"
@@ -88,7 +88,8 @@ def _rows(bar: Snapshot, depth: int, out: list[str]) -> None:
         f'<div role="progressbar" aria-label="{name}"{value} '
         f'aria-valuetext="{html.escape(spoken(bar))}" style="{_TRACK}">'
         f'<div style="{inner}"></div></div>'
-        f'<span style="opacity:.8;font-variant-numeric:tabular-nums">{numbers}</span>'
+        f'<span style="opacity:.8;font-variant-numeric:tabular-nums;overflow-wrap:anywhere">'
+        f"{numbers}</span>"
     )
     for child in bar.children:
         if child.status is not Status.PENDING:

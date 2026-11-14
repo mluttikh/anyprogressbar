@@ -62,4 +62,6 @@ uv run nbstripout --install               # once per clone: commit notebooks wit
 uv run python scripts/build_docs.py       # the documentation into site/ (examples run; warnings fail)
 uv run python scripts/build_docs.py serve # the same, previewed at http://localhost:8000
 uv run ruff check . && uv run ruff format --check . && uv run ty check && uv run pytest
+(cd js && npx playwright install chromium firefox webkit)   # once: browsers for the next line
+(cd js && npm run test:browser)           # the widget in three browsers, JupyterLab and marimo (build the docs first)
 ```
