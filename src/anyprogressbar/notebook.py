@@ -114,10 +114,19 @@ def bundle(root: Snapshot, *, note: str = "") -> dict[str, str]:
     return {"text/html": to_html(root, note=note), "text/plain": to_text(root)}
 
 
+def raised(root: Snapshot) -> bool:
+    """Whether the tree ended with an exception: it failed, or was interrupted. Its cell then
+    usually raises."""
+    return root.status is Status.FAILED or (
+        root.status is Status.STOPPED and root.message == "interrupted"
+    )
+
+
 class Display(Protocol):
     """Where the pictures go: one output per root, replaced on each call."""
 
-    def put(self, root_id: int, data: dict[str, str], *, final: bool) -> None: ...
+    def put(self, root_id: int, data: dict[str, str], *, final: bool, raised: bool = False) -> None:
+        """`final`: the tree's last picture. `raised`: it ended with an exception."""
 
 
 class IPythonDisplay:
@@ -126,7 +135,7 @@ class IPythonDisplay:
     def __init__(self) -> None:
         self._handles: dict[int, Any] = {}
 
-    def put(self, root_id: int, data: dict[str, str], *, final: bool) -> None:
+    def put(self, root_id: int, data: dict[str, str], *, final: bool, raised: bool = False) -> None:
         from IPython.display import display
 
         handle = self._handles.get(root_id)
@@ -140,14 +149,23 @@ class IPythonDisplay:
 
 class MarimoDisplay:
     """marimo replaces a cell's whole output, so the roots of one run are shown together:
-    those since the last moment that none was live."""
+    those since the last moment that none was live.
+
+    A cell that raises, or is interrupted, has its error put in place of its output, and the
+    bars there are lost; the cell's console stays, above the traceback. So a tree that ends
+    with an exception is written there too, as text (`sys.stderr` is the console in a cell).
+    Where the exception is caught in the cell, its text is in both places.
+    """
 
     def __init__(self) -> None:
         self._shown: dict[int, Any] = {}  # HTML, or something else marimo can show (a widget)
         self._live: set[int] = set()
 
-    def put(self, root_id: int, data: dict[str, str], *, final: bool) -> None:
+    def put(self, root_id: int, data: dict[str, str], *, final: bool, raised: bool = False) -> None:
         self.show(root_id, data["text/html"], final=final)
+        if final and raised:
+            sys.stderr.write(data["text/plain"] + "\n")
+            sys.stderr.flush()
 
     def show(self, root_id: int, item: Any, *, final: bool) -> None:
         import marimo
@@ -197,7 +215,11 @@ class NotebookRenderer:
     def _put(self, root: Snapshot, *, final: bool, note: str = "") -> None:
         if self._display is None:
             self._display = MarimoDisplay() if host() == "marimo" else IPythonDisplay()
-        self._display.put(root.id, bundle(root, note=note), final=final)
+        data = bundle(root, note=note)
+        if final:
+            self._display.put(root.id, data, final=True, raised=raised(root))
+        else:
+            self._display.put(root.id, data, final=False)
 
     def update(self, root: Snapshot) -> None:
         last = self._last.get(root.id)

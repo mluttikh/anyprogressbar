@@ -23,7 +23,7 @@ import time
 from pathlib import Path
 from typing import Any, Protocol
 
-from anyprogressbar.notebook import MarimoDisplay, NotebookRenderer, bundle, host
+from anyprogressbar.notebook import MarimoDisplay, NotebookRenderer, bundle, host, raised
 from anyprogressbar.state import Snapshot
 
 _STATIC = Path(__file__).parent / "static"
@@ -136,8 +136,9 @@ class WidgetDisplay(Protocol):
     def show(self, root_id: int, widget: Any, data: dict[str, str]) -> None:
         """Show the widget; `data` is the HTML and text for readers that have no widgets."""
 
-    def put(self, root_id: int, data: dict[str, str], *, final: bool) -> None:
-        """Put the HTML and text in the tree's place (the widget's, if it had one)."""
+    def put(self, root_id: int, data: dict[str, str], *, final: bool, raised: bool = False) -> None:
+        """Put the HTML and text in the tree's place (the widget's, if it had one).
+        `final`: the tree's last picture. `raised`: it ended with an exception."""
 
 
 class IPythonWidgetDisplay:
@@ -165,7 +166,7 @@ class IPythonWidgetDisplay:
             view = view[0]
         self._handles[root_id] = display({**view, **data}, raw=True, display_id=True)
 
-    def put(self, root_id: int, data: dict[str, str], *, final: bool) -> None:
+    def put(self, root_id: int, data: dict[str, str], *, final: bool, raised: bool = False) -> None:
         from IPython.display import display
 
         handle = self._handles.get(root_id)
@@ -191,8 +192,8 @@ class MarimoWidgetDisplay:
 
         self._outputs.show(root_id, marimo.ui.anywidget(widget), final=False)
 
-    def put(self, root_id: int, data: dict[str, str], *, final: bool) -> None:
-        self._outputs.put(root_id, data, final=final)
+    def put(self, root_id: int, data: dict[str, str], *, final: bool, raised: bool = False) -> None:
+        self._outputs.put(root_id, data, final=final, raised=raised)
 
 
 class WidgetRenderer:
@@ -314,7 +315,7 @@ class WidgetRenderer:
             return
         self._plain.discard(root.id)
         try:
-            self._target().put(root.id, bundle(root), final=True)
+            self._target().put(root.id, bundle(root), final=True, raised=raised(root))
         finally:
             if widget is not None:
                 self._retire(widget)

@@ -23,6 +23,12 @@ Seen working in JupyterLab 4.6 and in marimo. VS Code and Colab have not been tr
 Nothing to do: bars are the cell's output. Bars that run one after another in a cell are
 shown together.
 
+When a cell raises, or is interrupted, marimo shows the error in place of the cell's
+output, and the bars there go with it. So bars that end that way are also written to the
+cell's console, as text, above the traceback: you still see how far the work got. (If you
+catch the exception inside the cell, the bars are in the output and in the console.) An app
+started with `marimo run` shows no console, so its viewers see neither.
+
 ## The bar does not move
 
 **A line under the bar says the page shows no widgets.** The kernel has anywidget, but the

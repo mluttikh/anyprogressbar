@@ -133,6 +133,7 @@ class Shown:
         self.trees: dict[int, list[dict[str, Any]]] = {}
         self.html: dict[int, list[dict[str, str]]] = {}
         self.finished: dict[int, dict[str, str]] = {}
+        self.raised: dict[int, bool] = {}
         self.broken = broken
         self.heard = heard
 
@@ -144,9 +145,10 @@ class Shown:
         self.trees[root_id] = [widget.tree]
         widget.observe(lambda change: self.trees[root_id].append(change["new"]), names="tree")
 
-    def put(self, root_id, data, *, final):
+    def put(self, root_id, data, *, final, raised=False):
         if final:
             self.finished[root_id] = data
+            self.raised[root_id] = raised
         else:
             self.html.setdefault(root_id, []).append(data)
 
@@ -168,7 +170,7 @@ class Puts:
     def __init__(self) -> None:
         self.puts: list[tuple[dict[str, str], bool]] = []
 
-    def put(self, root_id, data, *, final):
+    def put(self, root_id, data, *, final, raised=False):
         self.puts.append((data, final))
 
 
@@ -221,6 +223,20 @@ def test_a_quick_failure_is_kept_as_html_without_a_widget(clock):
     ((data, final),) = puts.puts
     assert final
     assert "4/10 · failed after 00:00: ValueError: bad row" in data["text/plain"]
+
+
+@needs_bundle
+def test_a_widgets_last_picture_says_whether_the_tree_ended_with_an_exception(clock):
+    shown = Shown()
+    renderer = WidgetRenderer(shown, delay=0.0)
+    with pytest.raises(ValueError, match="bad row"):
+        for i in progress(range(10), "Fails", renderer=renderer, clock=clock):
+            clock.tick(1.0)
+            if i == 3:
+                raise ValueError("bad row")
+    for _ in progress(range(3), "Done", renderer=renderer, clock=clock):
+        clock.tick(1.0)
+    assert list(shown.raised.values()) == [True, False]
 
 
 @needs_bundle

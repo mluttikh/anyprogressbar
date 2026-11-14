@@ -28,7 +28,9 @@ All notable changes to anyprogressbar. The format follows
   Jupyter kernel (through a display handle) and in marimo. What the notebook stores is HTML
   and text, so a saved or exported notebook shows how the work ended. Each bar is a named
   `progressbar` for screen readers, and a failure is said in words as well as in colour. On
-  a narrow page the bar gives up width before the text does.
+  a narrow page the bar gives up width before the text does. In marimo, which shows a
+  raising cell's error in place of its output, bars that end with an exception are also
+  written to the cell's console, above the traceback.
 - The notebook widget (the `widget` extra, an anywidget): one widget for a tree of bars. Its
   clock ticks in the browser, so the elapsed time, the time remaining and a stall notice
   keep up during one slow item. When the work ends the output becomes the plain HTML and

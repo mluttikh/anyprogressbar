@@ -106,6 +106,39 @@ def test_in_marimo_the_bar_is_the_cells_output(tmp_path: Path):
     assert "In marimo:" not in run.stderr  # no log lines beside it
 
 
+def test_in_marimo_bars_that_ended_with_an_exception_are_kept_in_the_console(tmp_path: Path):
+    """marimo puts the error of a cell that raises in place of its output; the console stays."""
+    app = tmp_path / "app.py"
+    app.write_text(
+        "import marimo\n"
+        "app = marimo.App()\n\n"
+        "@app.cell\n"
+        "def _():\n"
+        "    import time\n"
+        "    from anyprogressbar import progress\n"
+        "    for epoch in progress(range(2), 'Epochs'):\n"
+        "        for i in progress(range(4), f'Batches {epoch}'):\n"
+        "            time.sleep(0.1)\n"
+        "            if epoch == 1 and i == 2:\n"
+        "                raise KeyError('id')\n"
+        "    return\n",
+        encoding="utf-8",
+    )
+    page = tmp_path / "app.html"
+    run = subprocess.run(
+        [sys.executable, "-m", "marimo", "export", "html", str(app), "-o", str(page)],
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    assert page.is_file(), run.stderr  # it says that a cell failed, and exports
+    markup = page.read_text(encoding="utf-8").replace("\\u00b7", "·")  # as JSON writes it
+    assert "Epochs" in markup
+    assert "1/2 · failed after 00:00: KeyError: 'id'" in markup
+    assert "2/4 · failed after 00:00: KeyError: 'id'" in markup
+
+
 def test_in_a_kernel_with_anywidget_the_running_bar_is_a_widget_and_the_record_is_not(executed):
     pytest.importorskip("anywidget")
     from anyprogressbar import widget

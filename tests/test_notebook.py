@@ -16,9 +16,12 @@ class Outputs:
 
     def __init__(self) -> None:
         self.puts: list[tuple[int, dict[str, str], bool]] = []
+        self.raised: list[int] = []  # the roots whose last picture said they ended raising
 
-    def put(self, root_id, data, *, final):
+    def put(self, root_id, data, *, final, raised=False):
         self.puts.append((root_id, data, final))
+        if raised:
+            self.raised.append(root_id)
 
     @property
     def html(self) -> str:
@@ -177,6 +180,48 @@ def test_marimo_shows_the_roots_of_one_run_together(monkeypatch):
     display.put(2, {"text/html": "<b2>"}, final=True)
     display.put(3, {"text/html": "<c1>"}, final=False)  # a new run: the old ones are let go
     assert replaced[-1] == "<c1>"
+
+
+def test_the_last_picture_says_whether_the_tree_ended_with_an_exception(clock):
+    out = Outputs()
+    renderer = notebook(out)
+    with pytest.raises(ValueError, match="bad row"):
+        for i in progress(range(10), "Fails", renderer=renderer, clock=clock):
+            clock.tick(1.0)
+            if i == 3:
+                raise ValueError("bad row")
+    with pytest.raises(KeyboardInterrupt):
+        for _ in progress(range(10), "Interrupted", renderer=renderer, clock=clock):
+            clock.tick(1.0)
+            raise KeyboardInterrupt
+    for i in progress(range(10), "Left", renderer=renderer, clock=clock):
+        clock.tick(1.0)
+        if i == 3:
+            break
+    for _ in progress(range(3), "Done", renderer=renderer, clock=clock):
+        clock.tick(1.0)
+    finals = [root_id for root_id, _, final in out.puts if final]
+    assert len(finals) == 4
+    assert out.raised == finals[:2]
+
+
+def test_in_marimo_a_tree_that_ended_with_an_exception_is_also_in_the_console(monkeypatch, capsys):
+    """marimo puts a raising cell's error in place of its output; its console stays."""
+    replaced = []
+    fake = types.SimpleNamespace(
+        Html=lambda markup: markup,
+        output=types.SimpleNamespace(replace=replaced.append),
+        running_in_notebook=lambda: True,
+    )
+    monkeypatch.setitem(sys.modules, "marimo", fake)
+    display = MarimoDisplay()
+    picture = {"text/html": "<a>", "text/plain": "Import  40% ▕██▏ 4/10 · failed after 00:01"}
+    display.put(1, picture, final=False)
+    display.put(1, picture, final=True)  # ended otherwise: the output keeps it
+    assert capsys.readouterr().err == ""
+    display.put(2, picture, final=True, raised=True)
+    assert replaced[-1] == "<a>"
+    assert capsys.readouterr().err == picture["text/plain"] + "\n"
 
 
 def test_a_jupyter_kernel_is_detected_and_a_plain_ipython_shell_is_not(monkeypatch):

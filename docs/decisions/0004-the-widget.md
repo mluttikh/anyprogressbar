@@ -72,11 +72,16 @@
 - A tree that fails before it was shown is recorded through the HTML renderer; in marimo
   that is a separate group of outputs from the widgets of the same run.
 - The colours are fixed mid-tones; they do not follow the host's theme.
-- **In marimo, the bars of a cell that raises are lost**: marimo puts the cell's error in
-  place of its output, which held them (`marimo run` shows nothing there at all). Jupyter
-  keeps both. A browser test expects them, and is marked as failing until they are kept.
+- **In marimo a tree that ends with an exception is also written to the console**, as text.
+  marimo puts the error of a cell that raises, or is interrupted, in place of its output,
+  and the bars there went with it; the cell's console stays, above the traceback. Its own
+  `mo.status.progress_bar` is lost the same way (and has no failed state), as is tqdm's
+  notebook bar, which marimo swaps for its own; plain tqdm and rich survive only because
+  they write to the console all the time. Only the console's text is public: HTML there
+  would need marimo's internal call. If the exception is caught in the cell, the bars are
+  in both places; `bar.fail()` without an exception writes them there too. `marimo run`
+  shows no console, so an app's viewers see neither, as they see no traceback.
 
 ## To do
 
 - Run it in VS Code and Colab.
-- Keep the failed bars of a marimo cell that raises (see Known limits).
